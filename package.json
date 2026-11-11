@@ -1,0 +1,11 @@
+{
+  "name": "techblog-workspace",
+  "version": "1.0.0",
+  "description": "TechBlog - Full Stack Technology Blog Platform",
+  "private": true,
+  "scripts": {
+    "frontend": "cd frontend && npm run dev",
+    "backend": "cd backend && npm run dev",
+    "seed": "cd backend && npm run seed"
+  }
+}
