@@ -12,3 +12,4 @@ router.get('/seo/sitemap.xml', getSitemapXml);
 router.get('/seo/robots.txt', getRobotsTxt);
 
 module.exports = router;
+

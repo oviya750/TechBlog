@@ -153,3 +153,41 @@ test('Contact form inquiry submission succeeds', async () => {
   assert.strictEqual(res.status, 201);
   assert.strictEqual(res.data.success, true);
 });
+
+test('CORS handles frontend port 5174 correctly', async () => {
+  const res = await makeRequest('/api/health', {
+    method: 'GET',
+    headers: {
+      Origin: 'http://localhost:5174'
+    }
+  });
+  assert.strictEqual(res.status, 200);
+  assert.strictEqual(res.headers['access-control-allow-origin'], 'http://localhost:5174');
+  assert.strictEqual(res.headers['access-control-allow-credentials'], 'true');
+});
+
+test('Production seed safety refuses default admin credentials', async () => {
+  const seedDatabase = require('../utils/seed');
+  const originalEnv = process.env.NODE_ENV;
+  const originalForce = process.env.FORCE_SEED;
+  process.env.NODE_ENV = 'production';
+  process.env.FORCE_SEED = 'true';
+  delete process.env.ADMIN_EMAIL;
+  delete process.env.ADMIN_PASSWORD;
+
+  await assert.rejects(
+    async () => {
+      await seedDatabase(false);
+    },
+    {
+      message: /SECURITY VIOLATION/
+    }
+  );
+
+  process.env.NODE_ENV = originalEnv;
+  if (originalForce !== undefined) {
+    process.env.FORCE_SEED = originalForce;
+  } else {
+    delete process.env.FORCE_SEED;
+  }
+});

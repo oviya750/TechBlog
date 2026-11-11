@@ -106,3 +106,4 @@ const listMedia = async (req, res, next) => {
 };
 
 module.exports = { uploadMedia, listMedia };
+

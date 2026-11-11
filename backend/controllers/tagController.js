@@ -54,3 +54,4 @@ const deleteTag = async (req, res, next) => {
 };
 
 module.exports = { getTags, createTag, deleteTag };
+

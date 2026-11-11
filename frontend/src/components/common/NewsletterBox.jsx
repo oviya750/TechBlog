@@ -96,3 +96,4 @@ const NewsletterBox = () => {
 };
 
 export default NewsletterBox;
+

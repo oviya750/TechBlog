@@ -8,3 +8,4 @@ router.post('/upload', protect, upload.single('image'), uploadMedia);
 router.get('/', protect, listMedia);
 
 module.exports = router;
+

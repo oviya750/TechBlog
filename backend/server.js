@@ -35,16 +35,25 @@ app.use(
 const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5174',
   process.env.CLIENT_URL
 ].filter(Boolean);
+
+// Match localhost origins on dev ports (5173, 5174, 5175, etc.)
+const isAllowedDevOrigin = (origin) => {
+  return /^http:\/\/(localhost|127\.0\.0\.1):(5173|5174|5175|3000|4173)$/.test(origin);
+};
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || allowedOrigins.includes(origin) || isAllowedDevOrigin(origin)) {
+        callback(null, true);
+      } else if (process.env.NODE_ENV !== 'production') {
         callback(null, true);
       } else {
-        callback(null, true); // Permissive in dev, can restrict in prod
+        callback(new Error(`Origin ${origin} not permitted by CORS policy.`));
       }
     },
     credentials: true,
@@ -117,9 +126,13 @@ const readyPromise = (async () => {
   const Category = require('./models/Category');
   const count = await Category.countDocuments();
   if (count === 0) {
-    console.log('📦 Database is uninitialized. Running automated initial seed...');
-    const seedDatabase = require('./utils/seed');
-    await seedDatabase(false);
+    if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_PROD_AUTO_SEED) {
+      console.log('ℹ️ Production mode: Database is uninitialized. Automated seeding skipped to protect production data.');
+    } else {
+      console.log('📦 Database is uninitialized. Running automated initial seed...');
+      const seedDatabase = require('./utils/seed');
+      await seedDatabase(false);
+    }
   }
 })();
 

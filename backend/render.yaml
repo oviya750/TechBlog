@@ -12,6 +12,10 @@ services:
         value: 10000
       - key: MONGODB_URI
         sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: CLIENT_URL
@@ -22,3 +26,4 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+

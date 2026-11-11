@@ -9,3 +9,4 @@
     "seed": "cd backend && npm run seed"
   }
 }
+

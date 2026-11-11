@@ -83,3 +83,4 @@ const FeaturedHeroCard = ({ article }) => {
 };
 
 export default FeaturedHeroCard;
+

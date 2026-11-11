@@ -52,3 +52,4 @@ const uploadImage = async (filePath, folder = 'techblog') => {
 };
 
 module.exports = { uploadImage };
+

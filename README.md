@@ -220,3 +220,4 @@ npm test
 - **Security Headers**: Helmet integration with cross-origin resource policy.
 - **Rate Limiting**: Rate limiter applied to authentication endpoints to prevent brute-force attempts.
 - **Input Sanitization**: File type restrictions and size bounds on image uploads.
+

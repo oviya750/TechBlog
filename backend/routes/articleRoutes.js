@@ -25,3 +25,4 @@ router.put('/:id', protect, updateArticle);
 router.delete('/:id', protect, deleteArticle);
 
 module.exports = router;
+

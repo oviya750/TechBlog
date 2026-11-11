@@ -37,3 +37,4 @@ const LoadingSpinner = ({ text = 'Loading editorial dispatches...' }) => {
 };
 
 export default LoadingSpinner;
+

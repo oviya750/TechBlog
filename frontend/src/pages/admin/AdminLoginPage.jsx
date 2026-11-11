@@ -154,34 +154,36 @@ const AdminLoginPage = () => {
           </button>
         </form>
 
-        {/* Demo Credentials Quick Fill Helper */}
-        <div
-          style={{
-            marginTop: '1.5rem',
-            padding: '1rem',
-            backgroundColor: 'var(--color-sage-subtle)',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid rgba(77, 155, 112, 0.25)'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-forest-dark)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <ShieldCheck size={14} color="var(--color-sage-dark)" /> Demo Admin Account
-            </span>
-            <button
-              type="button"
-              onClick={fillDemoCredentials}
-              className="btn btn-secondary btn-sm"
-              style={{ fontSize: '11px', padding: '0.2rem 0.5rem' }}
-            >
-              Fill Credentials
-            </button>
+        {/* Demo Credentials Quick Fill Helper - ONLY available in Development */}
+        {!import.meta.env.PROD && (
+          <div
+            style={{
+              marginTop: '1.5rem',
+              padding: '1rem',
+              backgroundColor: 'var(--color-sage-subtle)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid rgba(77, 155, 112, 0.25)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-forest-dark)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <ShieldCheck size={14} color="var(--color-sage-dark)" /> Local Dev Demo Account
+              </span>
+              <button
+                type="button"
+                onClick={fillDemoCredentials}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '11px', padding: '0.2rem 0.5rem' }}
+              >
+                Fill Credentials
+              </button>
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+              <strong>Email:</strong> admin@techblog.internal<br />
+              <strong>Password:</strong> AdminPassword2026!
+            </div>
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-            <strong>Email:</strong> admin@techblog.internal<br />
-            <strong>Password:</strong> AdminPassword2026!
-          </div>
-        </div>
+        )}
 
         <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
           <Link to="/" style={{ fontSize: 'var(--text-sm)', color: 'var(--color-forest)' }}>
@@ -194,3 +196,4 @@ const AdminLoginPage = () => {
 };
 
 export default AdminLoginPage;
+

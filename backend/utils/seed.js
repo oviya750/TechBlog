@@ -434,8 +434,29 @@ const seedDatabase = async (autoExit = true) => {
     console.log('🌱 Starting TechBlog Database Seeding...');
     await connectDB();
 
-    // Clear existing collections
-    console.log('🧹 Purging existing data...');
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // Safety Check: Never accidentally wipe production data unless explicitly forced
+    const existingArticleCount = await Article.countDocuments();
+    if (isProduction && existingArticleCount > 0 && process.env.FORCE_SEED !== 'true') {
+      console.warn('⚠️ ABORTED SEED: Production environment detected with existing articles.');
+      console.warn('⚠️ Set FORCE_SEED=true if you explicitly intend to overwrite existing production data.');
+      if (autoExit) process.exit(0);
+      return;
+    }
+
+    // Determine admin credentials
+    const adminEmail = process.env.ADMIN_EMAIL || (isProduction ? null : 'admin@techblog.internal');
+    const adminPassword = process.env.ADMIN_PASSWORD || (isProduction ? null : 'AdminPassword2026!');
+
+    if (isProduction && (!adminEmail || !adminPassword)) {
+      throw new Error(
+        'SECURITY VIOLATION: ADMIN_EMAIL and ADMIN_PASSWORD environment variables are required in production. Refusing to use insecure development credentials.'
+      );
+    }
+
+    // Clear existing collections safely
+    console.log('🧹 Purging existing collections for seed...');
     await Promise.all([
       User.deleteMany(),
       Category.deleteMany(),
@@ -445,16 +466,19 @@ const seedDatabase = async (autoExit = true) => {
     ]);
 
     // 1. Seed Admin User
-    console.log('👤 Seeding Default Admin User...');
+    console.log('👤 Seeding Admin User...');
     const adminUser = await User.create({
-      name: 'Editorial Director',
-      email: 'admin@techblog.internal',
-      password: 'AdminPassword2026!',
+      name: process.env.ADMIN_NAME || 'Editorial Director',
+      email: adminEmail,
+      password: adminPassword,
       role: 'admin',
       bio: 'Chief Technology Editor & Platform Administrator for TechBlog.',
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'
     });
-    console.log(`✅ Admin Created: ${adminUser.email} (Password: AdminPassword2026!)`);
+    console.log(`✅ Admin Account Created: ${adminUser.email}`);
+    if (!isProduction) {
+      console.log('⚠️ [DEV ONLY] Default admin password configured. Ensure ADMIN_PASSWORD is set in production.');
+    }
 
     // 2. Seed Categories
     console.log('📂 Seeding 7 Initial Categories...');
