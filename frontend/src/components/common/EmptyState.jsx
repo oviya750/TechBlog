@@ -6,7 +6,8 @@ const EmptyState = ({
   title = 'No articles found',
   message = 'Try refining your search terms or exploring another technology category.',
   actionLink = '/blog',
-  actionText = 'Browse All Articles'
+  actionText = 'Browse All Articles',
+  onAction
 }) => {
   return (
     <div style={{
@@ -38,11 +39,15 @@ const EmptyState = ({
       <p style={{ color: 'var(--color-text-muted)', marginBottom: '2rem', lineHeight: '1.6' }}>
         {message}
       </p>
-      {actionLink && (
+      {onAction ? (
+        <button onClick={onAction} className="btn btn-primary">
+          {actionText} <ArrowRight size={16} />
+        </button>
+      ) : actionLink ? (
         <Link to={actionLink} className="btn btn-primary">
           {actionText} <ArrowRight size={16} />
         </Link>
-      )}
+      ) : null}
     </div>
   );
 };

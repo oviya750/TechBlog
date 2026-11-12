@@ -1,5 +1,5 @@
-const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { verifyToken } = require('../config/jwt');
 
 const protect = async (req, res, next) => {
   let token;
@@ -8,10 +8,13 @@ const protect = async (req, res, next) => {
     req.headers.authorization &&
     req.headers.authorization.startsWith('Bearer')
   ) {
-    token = req.headers.authorization.split(' ')[1];
+    const parts = req.headers.authorization.split(' ');
+    if (parts.length === 2) {
+      token = parts[1];
+    }
   }
 
-  if (!token) {
+  if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
     return res.status(401).json({
       success: false,
       message: 'Access denied. Authentication token required.'
@@ -19,10 +22,7 @@ const protect = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || 'techblog_super_secret_jwt_key_nature_tech_2026_dev_env'
-    );
+    const decoded = verifyToken(token);
     req.user = await User.findById(decoded.id).select('-password');
     if (!req.user) {
       return res.status(401).json({
@@ -32,6 +32,18 @@ const protect = async (req, res, next) => {
     }
     next();
   } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication session expired. Please log in again.'
+      });
+    }
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid authentication token.'
+      });
+    }
     return res.status(401).json({
       success: false,
       message: 'Invalid or expired authentication token.'
@@ -41,7 +53,7 @@ const protect = async (req, res, next) => {
 
 const restrictTo = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+    if (!req.user || !roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to perform this action.'
@@ -51,5 +63,29 @@ const restrictTo = (...roles) => {
   };
 };
 
-module.exports = { protect, restrictTo };
+const optionalProtect = async (req, res, next) => {
+  let token;
+
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    const parts = req.headers.authorization.split(' ');
+    if (parts.length === 2) {
+      token = parts[1];
+    }
+  }
+
+  if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '') {
+    try {
+      const decoded = verifyToken(token);
+      req.user = await User.findById(decoded.id).select('-password');
+    } catch (error) {
+      // Non-blocking for public routes
+    }
+  }
+  next();
+};
+
+module.exports = { protect, restrictTo, optionalProtect };
 

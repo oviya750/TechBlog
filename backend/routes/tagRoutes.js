@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { getTags, createTag, deleteTag } = require('../controllers/tagController');
-const { protect } = require('../middleware/authMiddleware');
+const { getTags, createTag, updateTag, deleteTag } = require('../controllers/tagController');
+const { protect, restrictTo } = require('../middleware/authMiddleware');
 
 router.get('/', getTags);
-router.post('/', protect, createTag);
-router.delete('/:id', protect, deleteTag);
+router.post('/', protect, restrictTo('admin', 'editor'), createTag);
+router.put('/:id', protect, restrictTo('admin', 'editor'), updateTag);
+router.delete('/:id', protect, restrictTo('admin'), deleteTag);
 
 module.exports = router;
 

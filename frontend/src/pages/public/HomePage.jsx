@@ -5,6 +5,7 @@ import FeaturedHeroCard from '../../components/common/FeaturedHeroCard';
 import ArticleCard from '../../components/common/ArticleCard';
 import NewsletterBox from '../../components/common/NewsletterBox';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import SEOHead from '../../components/common/SEOHead';
 import {
   TrendingUp,
   ArrowRight,
@@ -68,6 +69,11 @@ const HomePage = () => {
 
   return (
     <div className="animate-fade-in">
+      <SEOHead
+        title="Engineering Publications & Technology Journal"
+        description="An independent technical journal investigating autonomous intelligence, distributed systems, cloud platforms, and software craftsmanship."
+        canonicalUrl={typeof window !== 'undefined' ? `${window.location.origin}/` : 'https://techblog.internal/'}
+      />
       {/* 1. ASYMMETRIC NATURE-TECH HERO SECTION */}
       <section className="hero-editorial-section">
         <div className="container">
@@ -179,10 +185,22 @@ const HomePage = () => {
             </Link>
           </div>
 
-          <div className="editorial-grid">
-            {latestArticles.map((article) => (
-              <ArticleCard key={article._id} article={article} />
-            ))}
+          <div className="editorial-grid-asymmetric">
+            {latestArticles.map((article, index) => {
+              // Lead dispatch in latest grid renders as an expansive horizontal editorial card
+              if (index === 0) {
+                return (
+                  <div key={article._id} className="editorial-col-full">
+                    <ArticleCard article={article} variant="horizontal" />
+                  </div>
+                );
+              }
+              return (
+                <div key={article._id} className="editorial-col-half">
+                  <ArticleCard article={article} variant="standard" />
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

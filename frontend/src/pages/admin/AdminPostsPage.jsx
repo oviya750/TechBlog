@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { articlesAPI, categoriesAPI } from '../../services/api';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import Pagination from '../../components/common/Pagination';
 import {
   Plus,
   Search,
@@ -165,111 +166,122 @@ const AdminPostsPage = () => {
         {loading ? (
           <LoadingSpinner text="Loading articles index..." />
         ) : articles.length > 0 ? (
-          <div className="data-table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th style={{ width: '40px' }}>Feat</th>
-                  <th>Title & Slug</th>
-                  <th>Category</th>
-                  <th>Author</th>
-                  <th>Status</th>
-                  <th>Views</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {articles.map((art) => (
-                  <tr key={art._id}>
-                    <td>
-                      <button
-                        onClick={() => handleToggleFeatured(art)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: art.isFeatured ? 'var(--color-orange)' : 'rgba(7, 63, 50, 0.2)'
-                        }}
-                        title={art.isFeatured ? 'Featured on homepage' : 'Mark as featured'}
-                      >
-                        <Star size={16} fill={art.isFeatured ? 'var(--color-orange)' : 'none'} />
-                      </button>
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600, color: 'var(--color-forest-dark)' }}>{art.title}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--color-text-light)', fontFamily: 'var(--font-code)' }}>
-                        /blog/{art.slug}
-                      </div>
-                    </td>
-                    <td>
-                      <span className="badge badge-sage">{art.category?.name || 'Tech'}</span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <img
-                          src={art.author?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'}
-                          alt={art.author?.name}
-                          style={{ width: '22px', height: '22px', borderRadius: '50%' }}
-                        />
-                        <span style={{ fontSize: '13px' }}>{art.author?.name || 'Staff'}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span
-                        className="badge"
-                        style={{
-                          backgroundColor:
-                            art.status === 'published'
-                              ? '#e8f5e9'
-                              : art.status === 'scheduled'
-                              ? '#e3f2fd'
-                              : 'var(--color-peach-light)',
-                          color:
-                            art.status === 'published'
-                              ? '#2e7d32'
-                              : art.status === 'scheduled'
-                              ? '#0288d1'
-                              : '#a04910'
-                        }}
-                      >
-                        {art.status}
-                      </span>
-                    </td>
-                    <td>{art.viewsCount || 0}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-                        {art.status === 'published' && (
-                          <Link
-                            to={`/blog/${art.slug}`}
-                            target="_blank"
-                            className="btn btn-ghost btn-sm"
-                            title="Preview public view"
-                          >
-                            <ExternalLink size={14} />
-                          </Link>
-                        )}
-                        <Link
-                          to={`/admin/posts/edit/${art._id}`}
-                          className="btn btn-secondary btn-sm"
-                          title="Edit dispatch"
-                        >
-                          <Edit size={14} />
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(art._id, art.title)}
-                          className="btn btn-ghost btn-sm"
-                          title="Delete article"
-                          style={{ color: 'var(--color-error)' }}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
+          <>
+            <div className="data-table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '40px' }}>Feat</th>
+                    <th>Title & Slug</th>
+                    <th>Category</th>
+                    <th>Author</th>
+                    <th>Status</th>
+                    <th>Views</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {articles.map((art) => (
+                    <tr key={art._id}>
+                      <td>
+                        <button
+                          onClick={() => handleToggleFeatured(art)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: art.isFeatured ? 'var(--color-orange)' : 'rgba(7, 63, 50, 0.2)'
+                          }}
+                          title={art.isFeatured ? 'Featured on homepage' : 'Mark as featured'}
+                        >
+                          <Star size={16} fill={art.isFeatured ? 'var(--color-orange)' : 'none'} />
+                        </button>
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 600, color: 'var(--color-forest-dark)' }}>{art.title}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--color-text-light)', fontFamily: 'var(--font-code)' }}>
+                          /blog/{art.slug}
+                        </div>
+                      </td>
+                      <td>
+                        <span className="badge badge-sage">{art.category?.name || 'Tech'}</span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <img
+                            src={art.author?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'}
+                            alt={art.author?.name}
+                            style={{ width: '22px', height: '22px', borderRadius: '50%' }}
+                          />
+                          <span style={{ fontSize: '13px' }}>{art.author?.name || 'Staff'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span
+                          className="badge"
+                          style={{
+                            backgroundColor:
+                              art.status === 'published'
+                                ? '#e8f5e9'
+                                : art.status === 'scheduled'
+                                ? '#e3f2fd'
+                                : 'var(--color-peach-light)',
+                            color:
+                              art.status === 'published'
+                                ? '#2e7d32'
+                                : art.status === 'scheduled'
+                                ? '#0288d1'
+                                : '#a04910'
+                          }}
+                        >
+                          {art.status}
+                        </span>
+                      </td>
+                      <td>{art.viewsCount || 0}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                          {art.status === 'published' && (
+                            <Link
+                              to={`/blog/${art.slug}`}
+                              target="_blank"
+                              className="btn btn-ghost btn-sm"
+                              title="Preview public view"
+                            >
+                              <ExternalLink size={14} />
+                            </Link>
+                          )}
+                          <Link
+                            to={`/admin/posts/edit/${art._id}`}
+                            className="btn btn-secondary btn-sm"
+                            title="Edit dispatch"
+                          >
+                            <Edit size={14} />
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(art._id, art.title)}
+                            className="btn btn-ghost btn-sm"
+                            title="Delete article"
+                            style={{ color: 'var(--color-error)' }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {totalPages > 1 && (
+              <div style={{ padding: '1rem', borderTop: 'var(--border-subtle)' }}>
+                <Pagination
+                  page={page}
+                  totalPages={totalPages}
+                  onPageChange={(newPage) => setPage(newPage)}
+                />
+              </div>
+            )}
+          </>
         ) : (
           <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
             No articles found matching the current filters.

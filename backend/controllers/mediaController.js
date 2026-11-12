@@ -17,6 +17,7 @@ const uploadMedia = async (req, res, next) => {
       success: true,
       message: 'Image uploaded successfully',
       data: {
+        id: result.publicId,
         url: result.url,
         publicId: result.publicId,
         storageType: result.storageType,
@@ -105,5 +106,39 @@ const listMedia = async (req, res, next) => {
   }
 };
 
-module.exports = { uploadMedia, listMedia };
+// @desc    Delete media file
+// @route   DELETE /api/media/:id
+// @access  Private
+const deleteMedia = async (req, res, next) => {
+  try {
+    const rawId = req.params.id;
+    // Sanitize filename against directory traversal
+    const safeFilename = path.basename(rawId);
+    const filePath = path.join(__dirname, '../uploads', safeFilename);
 
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      return res.status(200).json({
+        success: true,
+        message: 'Media file removed successfully'
+      });
+    }
+
+    // If it's a curated sample, return friendly message
+    if (rawId.startsWith('tech-')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Curated editorial sample library images cannot be deleted.'
+      });
+    }
+
+    res.status(404).json({
+      success: false,
+      message: 'Media asset not found on server.'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { uploadMedia, listMedia, deleteMedia };

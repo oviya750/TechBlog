@@ -33,13 +33,22 @@ const errorHandler = (err, req, res, next) => {
   }
 
   // Multer Error
-  if (err.name === 'MulterError') {
+  if (err.name === 'MulterError' || (err.message && err.message.includes('Only image files'))) {
     return res.status(400).json({ success: false, message: `Upload error: ${err.message}` });
   }
 
-  res.status(error.statusCode || 500).json({
+  // CORS forbidden
+  if (err.message && err.message.includes('not permitted by CORS policy')) {
+    return res.status(403).json({ success: false, message: err.message });
+  }
+
+  const isProduction = process.env.NODE_ENV === 'production';
+  const statusCode = error.statusCode || 500;
+
+  res.status(statusCode).json({
     success: false,
-    message: error.message || 'Server Internal Error'
+    message: statusCode === 500 && isProduction ? 'An internal server error occurred.' : (error.message || 'Server Internal Error'),
+    ...(isProduction ? {} : { stack: err.stack })
   });
 };
 

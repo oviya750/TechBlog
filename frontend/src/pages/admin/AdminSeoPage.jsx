@@ -1,18 +1,57 @@
-import React, { useState } from 'react';
-import { SearchCheck, ExternalLink, Globe, FileCode, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { SearchCheck, ExternalLink, Globe, FileCode, CheckCircle, AlertCircle } from 'lucide-react';
+import { settingsAPI } from '../../services/api';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 const AdminSeoPage = () => {
   const [siteTitle, setSiteTitle] = useState('TechBlog — Insights in Software, AI, Cloud & Engineering');
   const [siteDesc, setSiteDesc] = useState(
     'A curated technology publication covering modern software engineering, artificial intelligence, cloud architectures, cybersecurity, and emerging industry paradigms.'
   );
-  const [saved, setSaved] = useState(false);
+  const [canonicalUrl, setCanonicalUrl] = useState('https://techblog.internal');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState({ type: '', message: '' });
 
-  const handleSave = (e) => {
+  useEffect(() => {
+    settingsAPI
+      .get()
+      .then((res) => {
+        if (res.data.success && res.data.data) {
+          const s = res.data.data;
+          if (s.siteTitle) setSiteTitle(s.siteTitle);
+          if (s.siteDescription) setSiteDesc(s.siteDescription);
+          if (s.canonicalUrl) setCanonicalUrl(s.canonicalUrl);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load SEO settings:', err);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    try {
+      setSaving(true);
+      setFeedback({ type: '', message: '' });
+      await settingsAPI.update({
+        siteTitle,
+        siteDescription: siteDesc,
+        canonicalUrl
+      });
+      setFeedback({ type: 'success', message: 'SEO configuration saved and persisted to database!' });
+      setTimeout(() => setFeedback({ type: '', message: '' }), 4000);
+    } catch (err) {
+      setFeedback({ type: 'error', message: err.response?.data?.message || 'Failed to persist SEO settings.' });
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return <LoadingSpinner text="Loading SEO preferences from database..." />;
+  }
 
   return (
     <div>
@@ -25,11 +64,11 @@ const AdminSeoPage = () => {
         </p>
       </div>
 
-      {saved && (
+      {feedback.message && (
         <div
           style={{
-            backgroundColor: 'var(--color-success-bg)',
-            color: 'var(--color-success)',
+            backgroundColor: feedback.type === 'error' ? 'var(--color-error-bg)' : 'var(--color-success-bg)',
+            color: feedback.type === 'error' ? 'var(--color-error)' : 'var(--color-success)',
             padding: '0.75rem 1rem',
             borderRadius: 'var(--radius-md)',
             marginBottom: '1.25rem',
@@ -38,8 +77,8 @@ const AdminSeoPage = () => {
             gap: '8px'
           }}
         >
-          <CheckCircle size={16} />
-          <span>SEO settings updated successfully!</span>
+          {feedback.type === 'error' ? <AlertCircle size={16} /> : <CheckCircle size={16} />}
+          <span>{feedback.message}</span>
         </div>
       )}
 
@@ -105,6 +144,7 @@ const AdminSeoPage = () => {
                 value={siteTitle}
                 onChange={(e) => setSiteTitle(e.target.value)}
                 className="form-input"
+                required
               />
             </div>
 
@@ -115,6 +155,7 @@ const AdminSeoPage = () => {
                 onChange={(e) => setSiteDesc(e.target.value)}
                 rows={4}
                 className="form-textarea"
+                required
               />
             </div>
 
@@ -122,14 +163,15 @@ const AdminSeoPage = () => {
               <label className="form-label">Canonical Domain URL</label>
               <input
                 type="text"
-                defaultValue="https://techblog.internal"
+                value={canonicalUrl}
+                onChange={(e) => setCanonicalUrl(e.target.value)}
                 className="form-input"
-                readOnly
+                required
               />
             </div>
 
-            <button type="submit" className="btn btn-primary">
-              Save SEO Configuration
+            <button type="submit" className="btn btn-primary" disabled={saving}>
+              {saving ? 'Saving...' : 'Save SEO Configuration'}
             </button>
           </form>
         </div>
@@ -152,7 +194,7 @@ const AdminSeoPage = () => {
             >
               <div style={{ fontSize: '14px', color: '#202124', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ fontWeight: 600 }}>TechBlog</span>
-                <span style={{ color: '#5f6368', fontSize: '12px' }}>https://techblog.internal › blog</span>
+                <span style={{ color: '#5f6368', fontSize: '12px' }}>{canonicalUrl} › blog</span>
               </div>
               <div
                 style={{
@@ -189,4 +231,3 @@ const AdminSeoPage = () => {
 };
 
 export default AdminSeoPage;
-

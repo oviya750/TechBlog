@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Settings, Save, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Settings, Save, CheckCircle2, AlertCircle } from 'lucide-react';
+import { settingsAPI } from '../../services/api';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 const AdminSettingsPage = () => {
   const [settings, setSettings] = useState({
@@ -12,13 +14,52 @@ const AdminSettingsPage = () => {
     enableComments: false,
     enableNewsletterPopup: true
   });
-  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState({ type: '', message: '' });
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    settingsAPI
+      .get()
+      .then((res) => {
+        if (res.data.success && res.data.data) {
+          const s = res.data.data;
+          setSettings({
+            siteName: s.siteName || 'TechBlog',
+            tagline: s.tagline || 'The Engineering & Technology Editorial',
+            readingSpeedWpm: s.readingSpeedWpm || 200,
+            twitterUrl: s.twitterUrl || '',
+            githubUrl: s.githubUrl || '',
+            linkedinUrl: s.linkedinUrl || '',
+            enableComments: !!s.enableComments,
+            enableNewsletterPopup: s.enableNewsletterPopup !== false
+          });
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load settings:', err);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    try {
+      setSaving(true);
+      setFeedback({ type: '', message: '' });
+      await settingsAPI.update(settings);
+      setFeedback({ type: 'success', message: 'Platform settings updated and persisted to database!' });
+      setTimeout(() => setFeedback({ type: '', message: '' }), 4000);
+    } catch (err) {
+      setFeedback({ type: 'error', message: err.response?.data?.message || 'Failed to save settings.' });
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return <LoadingSpinner text="Loading publication preferences from database..." />;
+  }
 
   return (
     <div style={{ maxWidth: '800px' }}>
@@ -31,11 +72,11 @@ const AdminSettingsPage = () => {
         </p>
       </div>
 
-      {saved && (
+      {feedback.message && (
         <div
           style={{
-            backgroundColor: 'var(--color-success-bg)',
-            color: 'var(--color-success)',
+            backgroundColor: feedback.type === 'error' ? 'var(--color-error-bg)' : 'var(--color-success-bg)',
+            color: feedback.type === 'error' ? 'var(--color-error)' : 'var(--color-success)',
             padding: '0.75rem 1rem',
             borderRadius: 'var(--radius-md)',
             marginBottom: '1.25rem',
@@ -44,8 +85,8 @@ const AdminSettingsPage = () => {
             gap: '8px'
           }}
         >
-          <CheckCircle2 size={16} />
-          <span>Configuration saved successfully!</span>
+          {feedback.type === 'error' ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}
+          <span>{feedback.message}</span>
         </div>
       )}
 
@@ -62,6 +103,7 @@ const AdminSettingsPage = () => {
               value={settings.siteName}
               onChange={(e) => setSettings({ ...settings, siteName: e.target.value })}
               className="form-input"
+              required
             />
           </div>
 
@@ -72,6 +114,7 @@ const AdminSettingsPage = () => {
               value={settings.tagline}
               onChange={(e) => setSettings({ ...settings, tagline: e.target.value })}
               className="form-input"
+              required
             />
           </div>
 
@@ -80,9 +123,11 @@ const AdminSettingsPage = () => {
             <input
               type="number"
               value={settings.readingSpeedWpm}
-              onChange={(e) => setSettings({ ...settings, readingSpeedWpm: parseInt(e.target.value, 10) })}
+              onChange={(e) => setSettings({ ...settings, readingSpeedWpm: parseInt(e.target.value, 10) || 200 })}
               className="form-input"
               style={{ maxWidth: '200px' }}
+              min={100}
+              max={400}
             />
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-light)' }}>
               Standard technical reading pace is 180-220 words per minute.
@@ -126,8 +171,8 @@ const AdminSettingsPage = () => {
           </div>
         </div>
 
-        <button type="submit" className="btn btn-primary" style={{ padding: '0.85rem 1.8rem' }}>
-          <Save size={16} /> Save Platform Settings
+        <button type="submit" className="btn btn-primary" disabled={saving} style={{ padding: '0.85rem 1.8rem' }}>
+          <Save size={16} /> {saving ? 'Saving...' : 'Save Platform Settings'}
         </button>
       </form>
     </div>
@@ -135,4 +180,3 @@ const AdminSettingsPage = () => {
 };
 
 export default AdminSettingsPage;
-

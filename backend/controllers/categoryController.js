@@ -129,10 +129,29 @@ const deleteCategory = async (req, res, next) => {
   try {
     const articleCount = await Article.countDocuments({ category: req.params.id });
     if (articleCount > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot delete category: ${articleCount} articles are assigned to it. Reassign articles first.`
-      });
+      const { reassignTo } = req.body || {};
+      if (reassignTo) {
+        if (reassignTo === req.params.id) {
+          return res.status(400).json({
+            success: false,
+            message: 'Target category for reassignment cannot be the category being deleted.'
+          });
+        }
+        const targetCategory = await Category.findById(reassignTo);
+        if (!targetCategory) {
+          return res.status(404).json({
+            success: false,
+            message: 'Target category for reassignment was not found.'
+          });
+        }
+        // Reassign all associated articles to targetCategory
+        await Article.updateMany({ category: req.params.id }, { category: reassignTo });
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot delete category: ${articleCount} articles are assigned to it. Reassign articles first or specify reassignTo.`
+        });
+      }
     }
 
     const category = await Category.findByIdAndDelete(req.params.id);

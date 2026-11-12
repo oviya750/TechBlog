@@ -41,6 +41,52 @@ const createTag = async (req, res, next) => {
   }
 };
 
+// @desc    Update tag
+// @route   PUT /api/tags/:id
+// @access  Private
+const updateTag = async (req, res, next) => {
+  try {
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Tag name is required.' });
+    }
+
+    const trimmedName = name.trim();
+    const slug = slugify(trimmedName, { lower: true, strict: true });
+
+    const existing = await Tag.findOne({ slug, _id: { $ne: req.params.id } });
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'A tag with this name already exists.' });
+    }
+
+    const tag = await Tag.findById(req.params.id);
+    if (!tag) {
+      return res.status(404).json({ success: false, message: 'Tag not found.' });
+    }
+
+    const oldName = tag.name;
+    tag.name = trimmedName;
+    tag.slug = slug;
+    await tag.save();
+
+    // Propagate tag renaming across any articles that reference oldName
+    if (oldName !== trimmedName) {
+      await Article.updateMany(
+        { tags: oldName },
+        { $set: { 'tags.$': trimmedName } }
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Tag updated successfully',
+      data: tag
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Delete tag
 // @route   DELETE /api/tags/:id
 // @access  Private
@@ -53,5 +99,5 @@ const deleteTag = async (req, res, next) => {
   }
 };
 
-module.exports = { getTags, createTag, deleteTag };
+module.exports = { getTags, createTag, updateTag, deleteTag };
 

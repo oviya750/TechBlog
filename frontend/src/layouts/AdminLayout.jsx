@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import AdminSidebar from '../components/layout/AdminSidebar';
 import AdminNavbar from '../components/layout/AdminNavbar';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import SEOHead from '../components/common/SEOHead';
 
 const AdminLayout = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -23,10 +24,14 @@ const AdminLayout = () => {
 
   return (
     <div className="admin-shell">
+      <a href="#admin-main-content" className="skip-to-content">
+        Skip to console content
+      </a>
+      <SEOHead title="Editorial Staff Console" noindex={true} />
       <AdminSidebar />
       <div className="admin-main-wrap">
         <AdminNavbar />
-        <main className="admin-content-body">
+        <main id="admin-main-content" className="admin-content-body" tabIndex="-1">
           <Outlet />
         </main>
       </div>

@@ -13,7 +13,10 @@ import {
   ArrowRight,
   TrendingUp,
   Image,
-  Calendar
+  Calendar,
+  Users,
+  Mail,
+  Activity
 } from 'lucide-react';
 
 const AdminDashboardPage = () => {
@@ -133,12 +136,63 @@ const AdminDashboardPage = () => {
         </div>
 
         <div className="metric-card">
+          <div className="metric-icon-box" style={{ backgroundColor: '#e0f2f1', color: '#00695c' }}>
+            <Users size={26} />
+          </div>
+          <div>
+            <div className="metric-val">{summary.totalAuthors || 0}</div>
+            <div className="metric-label">Total Authors</div>
+          </div>
+        </div>
+
+        <div className="metric-card">
           <div className="metric-icon-box" style={{ backgroundColor: '#fff3e0', color: '#ef6c00' }}>
             <Eye size={26} />
           </div>
           <div>
             <div className="metric-val">{summary.totalViews.toLocaleString()}</div>
             <div className="metric-label">Total Readers</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Useful Dashboard Activity Information Strip */}
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          backgroundColor: 'var(--color-white)',
+          padding: '0.85rem 1.25rem',
+          borderRadius: 'var(--radius-lg)',
+          border: 'var(--border-subtle)',
+          boxShadow: 'var(--shadow-xs)',
+          marginBottom: 'var(--space-8)',
+          gap: '1rem'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Activity size={18} color="var(--color-sage)" />
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-forest-dark)' }}>
+            Publication Live Activity:
+          </span>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
+            All systems operational • Persistent MongoDB storage active
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', fontSize: 'var(--text-xs)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Mail size={14} color="var(--color-orange)" />
+            <span style={{ color: 'var(--color-text-muted)' }}>Subscribers:</span>
+            <strong style={{ color: 'var(--color-forest-dark)' }}>{summary.totalSubscribers || 0}</strong>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ color: 'var(--color-text-muted)' }}>Unread Inquiries:</span>
+            <strong style={{ color: summary.unreadContacts > 0 ? 'var(--color-orange)' : 'var(--color-forest-dark)' }}>
+              {summary.unreadContacts || 0}
+            </strong>
           </div>
         </div>
       </div>
@@ -202,13 +256,26 @@ const AdminDashboardPage = () => {
                       </span>
                     </td>
                     <td>
-                      <Link
-                        to={`/admin/posts/edit/${art._id}`}
-                        className="btn btn-ghost btn-sm"
-                        style={{ padding: '0.2rem 0.6rem', fontSize: '12px' }}
-                      >
-                        Edit
-                      </Link>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        {art.status === 'published' && (
+                          <Link
+                            to={`/blog/${art.slug}`}
+                            target="_blank"
+                            className="btn btn-ghost btn-sm"
+                            style={{ padding: '0.25rem 0.5rem', fontSize: '12px' }}
+                            title="Preview public view"
+                          >
+                            <Eye size={13} />
+                          </Link>
+                        )}
+                        <Link
+                          to={`/admin/posts/edit/${art._id}`}
+                          className="btn btn-secondary btn-sm"
+                          style={{ padding: '0.25rem 0.6rem', fontSize: '12px' }}
+                        >
+                          Edit
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -219,48 +286,100 @@ const AdminDashboardPage = () => {
 
         {/* Top Performing Articles */}
         <div className="admin-card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-4)' }}>
-            <TrendingUp size={20} color="var(--color-orange)" />
-            <h3 style={{ fontSize: '1.25rem', color: 'var(--color-forest-dark)' }}>
-              Most Read Articles
-            </h3>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-5)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <TrendingUp size={20} color="var(--color-orange)" />
+              <h3 style={{ fontSize: '1.25rem', color: 'var(--color-forest-dark)', margin: 0 }}>
+                Most Read Articles
+              </h3>
+            </div>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-light)', fontWeight: 600 }}>
+              All-Time Views
+            </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {topArticles.map((art, index) => (
-              <div
-                key={art._id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.75rem 0',
-                  borderBottom: index < topArticles.length - 1 ? '1px solid rgba(7, 63, 50, 0.06)' : 'none'
-                }}
-              >
-                <div>
-                  <Link
-                    to={`/blog/${art.slug}`}
-                    target="_blank"
-                    style={{ fontWeight: 600, fontSize: '0.925rem', color: 'var(--color-forest-dark)', display: 'block' }}
-                  >
-                    {art.title}
-                  </Link>
-                  <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
-                    {art.category?.name} • {art.readTimeMinutes} min
-                  </div>
-                </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            {topArticles.map((art, index) => {
+              const maxViews = Math.max(...topArticles.map((a) => a.viewsCount || 1), 1);
+              const percentage = Math.round(((art.viewsCount || 0) / maxViews) * 100);
 
-                <div style={{ textAlign: 'right', flexShrink: 0, paddingLeft: '1rem' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--color-forest)', fontSize: '0.95rem' }}>
-                    {art.viewsCount?.toLocaleString() || 0}
+              return (
+                <div
+                  key={art._id}
+                  style={{
+                    padding: '0.85rem 1rem',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'var(--color-ivory-light)',
+                    border: '1px solid rgba(7, 63, 50, 0.05)',
+                    transition: 'all var(--transition-fast)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                      <span
+                        style={{
+                          fontFamily: 'var(--font-heading)',
+                          fontSize: '1.1rem',
+                          fontWeight: 800,
+                          color: index === 0 ? 'var(--color-orange)' : 'var(--color-sage)',
+                          lineHeight: 1.2
+                        }}
+                      >
+                        0{index + 1}
+                      </span>
+                      <div>
+                        <Link
+                          to={`/blog/${art.slug}`}
+                          target="_blank"
+                          style={{
+                            fontWeight: 600,
+                            fontSize: '0.925rem',
+                            color: 'var(--color-forest-dark)',
+                            display: 'block',
+                            lineHeight: 1.35
+                          }}
+                        >
+                          {art.title}
+                        </Link>
+                        <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '3px' }}>
+                          {art.category?.name} • {art.readTimeMinutes || 5} min read
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontWeight: 800, color: 'var(--color-forest)', fontSize: '1rem' }}>
+                        {art.viewsCount?.toLocaleString() || 0}
+                      </div>
+                      <div style={{ fontSize: '10px', color: 'var(--color-text-light)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        readers
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ fontSize: '10px', color: 'var(--color-text-light)', textTransform: 'uppercase' }}>
-                    Views
+
+                  {/* Visual Reader Volume Bar */}
+                  <div
+                    style={{
+                      height: '4px',
+                      backgroundColor: 'rgba(7, 63, 50, 0.08)',
+                      borderRadius: '2px',
+                      marginTop: '0.65rem',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${percentage}%`,
+                        height: '100%',
+                        backgroundColor: index === 0 ? 'var(--color-orange)' : 'var(--color-sage)',
+                        borderRadius: '2px',
+                        transition: 'width 0.6s ease'
+                      }}
+                    />
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

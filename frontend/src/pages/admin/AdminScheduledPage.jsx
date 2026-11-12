@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { articlesAPI } from '../../services/api';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { CalendarClock, CheckCircle, Edit, Play, Clock } from 'lucide-react';
+import { CalendarClock, CheckCircle, Edit, Play, Clock, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const AdminScheduledPage = () => {
   const [scheduledPosts, setScheduledPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [evaluating, setEvaluating] = useState(false);
   const [message, setMessage] = useState('');
 
   const fetchScheduled = async () => {
@@ -38,15 +39,47 @@ const AdminScheduledPage = () => {
     }
   };
 
+  const handleEvaluateQueue = async () => {
+    try {
+      setEvaluating(true);
+      const res = await articlesAPI.publishScheduled();
+      setMessage(res.data.message || 'Scheduled queue evaluated successfully.');
+      fetchScheduled();
+      setTimeout(() => setMessage(''), 4000);
+    } catch (err) {
+      alert('Failed to evaluate scheduled queue.');
+    } finally {
+      setEvaluating(false);
+    }
+  };
+
   return (
     <div>
-      <div style={{ marginBottom: 'var(--space-8)' }}>
-        <h1 style={{ fontSize: '2rem', color: 'var(--color-forest-dark)', marginBottom: '0.25rem' }}>
-          Scheduled Publications Queue
-        </h1>
-        <p style={{ color: 'var(--color-text-muted)' }}>
-          Articles staged for automatic embargo release at predetermined dates and times.
-        </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: 'var(--space-8)' }}>
+        <div>
+          <h1 style={{ fontSize: '2rem', color: 'var(--color-forest-dark)', marginBottom: '0.25rem' }}>
+            Scheduled Publications Queue
+          </h1>
+          <p style={{ color: 'var(--color-text-muted)' }}>
+            Articles staged for automatic embargo release at predetermined dates and times.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={handleEvaluateQueue}
+            disabled={evaluating}
+            className="btn btn-secondary"
+            title="Check and auto-release any articles whose scheduled date has arrived"
+          >
+            <RefreshCw size={15} className={evaluating ? 'spin' : ''} />
+            <span>{evaluating ? 'Checking...' : 'Check Due Embargoes'}</span>
+          </button>
+
+          <Link to="/admin/posts/new" className="btn btn-primary">
+            Schedule New Dispatch
+          </Link>
+        </div>
       </div>
 
       {message && (
@@ -147,4 +180,3 @@ const AdminScheduledPage = () => {
 };
 
 export default AdminScheduledPage;
-

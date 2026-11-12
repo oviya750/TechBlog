@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const path = require('path');
+const dns = require('dns');
+
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
+} catch (e) {}
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
@@ -10,6 +15,7 @@ const Category = require('../models/Category');
 const Author = require('../models/Author');
 const Tag = require('../models/Tag');
 const Article = require('../models/Article');
+const Setting = require('../models/Setting');
 
 const initialCategories = [
   {
@@ -449,33 +455,61 @@ const seedDatabase = async (autoExit = true) => {
     const adminEmail = process.env.ADMIN_EMAIL || (isProduction ? null : 'admin@techblog.internal');
     const adminPassword = process.env.ADMIN_PASSWORD || (isProduction ? null : 'AdminPassword2026!');
 
-    if (isProduction && (!adminEmail || !adminPassword)) {
-      throw new Error(
-        'SECURITY VIOLATION: ADMIN_EMAIL and ADMIN_PASSWORD environment variables are required in production. Refusing to use insecure development credentials.'
-      );
+    const INSECURE_DEFAULT_PASSWORDS = [
+      'AdminPassword2026!',
+      'admin',
+      'password',
+      '123456',
+      'admin123'
+    ];
+
+    if (isProduction) {
+      if (!adminEmail || !adminPassword) {
+        throw new Error(
+          'SECURITY VIOLATION: ADMIN_EMAIL and ADMIN_PASSWORD environment variables are required in production. Refusing to use insecure development credentials.'
+        );
+      }
+      if (INSECURE_DEFAULT_PASSWORDS.includes(adminPassword)) {
+        throw new Error(
+          'SECURITY VIOLATION: The configured ADMIN_PASSWORD is a known default development credential. You must set a unique, strong password in production.'
+        );
+      }
+      if (adminEmail === 'admin@techblog.internal') {
+        throw new Error(
+          'SECURITY VIOLATION: The default admin@techblog.internal email cannot be used in production. Configure a verified production email.'
+        );
+      }
     }
 
-    // Clear existing collections safely
-    console.log('🧹 Purging existing collections for seed...');
+    // 1. Seed or Preserve Admin User (Ensures existing admin accounts & tokens remain valid)
+    console.log('👤 Checking / Seeding Admin User...');
+    const normalizedAdminEmail = adminEmail.toLowerCase().trim();
+    let adminUser = await User.findOne({ email: normalizedAdminEmail });
+    if (!adminUser) {
+      adminUser = await User.create({
+        name: process.env.ADMIN_NAME || 'Editorial Director',
+        email: normalizedAdminEmail,
+        password: adminPassword,
+        role: 'admin',
+        bio: 'Chief Technology Editor & Platform Administrator for TechBlog.',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'
+      });
+      console.log(`✅ Admin Account Created: ${adminUser.email}`);
+    } else {
+      console.log(`ℹ️ Existing Admin Account preserved: ${adminUser.email} (ID: ${adminUser._id})`);
+    }
+
+    // Purge any orphan/non-admin users to avoid duplicate accounts during seeding
+    await User.deleteMany({ _id: { $ne: adminUser._id } });
+
+    // Refresh content collections safely for seed
+    console.log('🧹 Purging existing content collections for seed...');
     await Promise.all([
-      User.deleteMany(),
       Category.deleteMany(),
       Author.deleteMany(),
       Tag.deleteMany(),
       Article.deleteMany()
     ]);
-
-    // 1. Seed Admin User
-    console.log('👤 Seeding Admin User...');
-    const adminUser = await User.create({
-      name: process.env.ADMIN_NAME || 'Editorial Director',
-      email: adminEmail,
-      password: adminPassword,
-      role: 'admin',
-      bio: 'Chief Technology Editor & Platform Administrator for TechBlog.',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'
-    });
-    console.log(`✅ Admin Account Created: ${adminUser.email}`);
     if (!isProduction) {
       console.log('⚠️ [DEV ONLY] Default admin password configured. Ensure ADMIN_PASSWORD is set in production.');
     }
@@ -526,11 +560,28 @@ const seedDatabase = async (autoExit = true) => {
       await Author.findByIdAndUpdate(author._id, { articleCount: count });
     }
 
+    // 6. Seed Platform & SEO Settings if not present
+    let setting = await Setting.findOne();
+    if (!setting) {
+      await Setting.create({
+        siteName: 'TechBlog',
+        tagline: 'The Engineering & Technology Editorial',
+        siteTitle: 'TechBlog — Insights in Software, AI, Cloud & Engineering',
+        siteDescription:
+          'A curated technology publication covering modern software engineering, artificial intelligence, cloud architectures, cybersecurity, and emerging industry paradigms.',
+        canonicalUrl: 'http://localhost:5001',
+        readingSpeedWpm: 200,
+        enableComments: false,
+        enableNewsletterPopup: true
+      });
+      console.log('✅ Global Platform & SEO Settings initialized.');
+    }
+
     console.log('\n🎉 ================================================');
     console.log('🎉 TECHBLOG DATABASE SEEDING COMPLETED SUCCESSFULLY!');
     console.log('🎉 ================================================');
-    console.log('Admin Email:    admin@techblog.internal');
-    console.log('Admin Password: AdminPassword2026!');
+    console.log(`Admin Email:    ${adminEmail}`);
+    console.log('Admin Password: [SECURED - NOT EXPOSED IN LOGS]');
     console.log('================================================\n');
 
     if (autoExit) {

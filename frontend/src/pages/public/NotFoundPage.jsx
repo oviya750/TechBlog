@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Compass, Home, Search, BookOpen } from 'lucide-react';
+import SEOHead from '../../components/common/SEOHead';
 
 const NotFoundPage = () => {
   return (
@@ -13,6 +14,11 @@ const NotFoundPage = () => {
         margin: '0 auto'
       }}
     >
+      <SEOHead
+        title="404 — Page Not Found"
+        description="The requested article or page does not exist on TechBlog."
+        noindex={true}
+      />
       <div
         style={{
           width: '80px',

@@ -1,13 +1,6 @@
-const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const User = require('../models/User');
-
-const generateToken = (id) => {
-  return jwt.sign(
-    { id },
-    process.env.JWT_SECRET || 'techblog_super_secret_jwt_key_nature_tech_2026_dev_env',
-    { expiresIn: '30d' }
-  );
-};
+const { generateToken } = require('../config/jwt');
 
 // @desc    Admin / User Login
 // @route   POST /api/auth/login
@@ -16,16 +9,45 @@ const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
       return res.status(400).json({
         success: false,
         message: 'Please provide both email and password.'
       });
     }
 
-    const user = await User.findOne({ email }).select('+password');
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanPassword = password.trim();
+
+    if (!cleanEmail || !cleanPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide both email and password.'
+      });
+    }
+
+    // Strict email format validation
+    const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,})+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid email address.'
+      });
+    }
+
+    // Password minimum length check
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters.'
+      });
+    }
+
+    const user = await User.findOne({ email: cleanEmail }).select('+password');
 
     if (!user) {
+      // Timing attack mitigation: execute dummy bcrypt comparison
+      await bcrypt.compare(password, '$2a$10$abcdefghijklmnopqrstuvwxyz123456789012345678901234567890');
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password.'
@@ -68,6 +90,13 @@ const login = async (req, res, next) => {
 const getMe = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'The user belonging to this token no longer exists.'
+      });
+    }
+
     res.status(200).json({
       success: true,
       user: {

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   Search,
@@ -9,21 +9,59 @@ import {
   Lock,
   ArrowRight,
   Terminal,
-  ShieldAlert
+  ShieldAlert,
+  ChevronDown
 } from 'lucide-react';
 import { articlesAPI, categoriesAPI } from '../../services/api';
 
 const Navbar = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const pathname = location.pathname;
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [categories, setCategories] = useState([]);
+
+  const dropdownRef = useRef(null);
+
+  // Mutually exclusive active state resolution
+  const isHomeActive = pathname === '/';
+  const isArticlesActive =
+    !pathname.startsWith('/admin') &&
+    (pathname === '/blog' || (pathname.startsWith('/blog/') && !pathname.startsWith('/blog/category')));
+  const isCategoriesActive =
+    !pathname.startsWith('/admin') &&
+    (pathname.startsWith('/category/') || pathname === '/category' || pathname === '/categories');
+  const isAboutActive =
+    !pathname.startsWith('/admin') && (pathname === '/about' || pathname.startsWith('/about/'));
+  const isContactActive =
+    !pathname.startsWith('/admin') && (pathname === '/contact' || pathname.startsWith('/contact/'));
+
+  // Close dropdown and mobile drawer on route navigation
+  useEffect(() => {
+    setCategoryDropdownOpen(false);
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
+  // Click outside to close category dropdown
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setCategoryDropdownOpen(false);
+      }
+    };
+    if (categoryDropdownOpen) {
+      document.addEventListener('click', handleOutsideClick);
+    }
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, [categoryDropdownOpen]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -68,6 +106,32 @@ const Navbar = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Global keyboard shortcuts: "/" or "Ctrl+K" / "Cmd+K" to open search; "Escape" to close
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const activeTag = document.activeElement?.tagName;
+      const isInputActive =
+        ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag) ||
+        document.activeElement?.isContentEditable;
+
+      if (e.key === 'Escape' && searchModalOpen) {
+        setSearchModalOpen(false);
+        return;
+      }
+
+      if (
+        (e.key === '/' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k')) &&
+        !isInputActive
+      ) {
+        e.preventDefault();
+        setSearchModalOpen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [searchModalOpen]);
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -94,21 +158,122 @@ const Navbar = () => {
           <nav>
             <ul className="nav-links">
               <li className="nav-item">
-                <NavLink to="/" end>
-                  Home
-                </NavLink>
+                <Link to="/" className={`nav-link ${isHomeActive ? 'active' : ''}`}>
+                  <span className="nav-label">Home</span>
+                </Link>
               </li>
               <li className="nav-item">
-                <NavLink to="/blog">All Articles</NavLink>
+                <Link to="/blog" className={`nav-link ${isArticlesActive ? 'active' : ''}`}>
+                  <span className="nav-label">All Articles</span>
+                </Link>
               </li>
-              <li className="nav-item" style={{ position: 'relative' }}>
-                <NavLink to="/category/software-development">Categories</NavLink>
+              <li
+                ref={dropdownRef}
+                className="nav-item has-dropdown"
+                style={{ position: 'relative' }}
+                onMouseEnter={() => setCategoryDropdownOpen(true)}
+                onMouseLeave={() => setCategoryDropdownOpen(false)}
+              >
+                <button
+                  type="button"
+                  className={`nav-link nav-dropdown-trigger ${isCategoriesActive ? 'active' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCategoryDropdownOpen((prev) => !prev);
+                  }}
+                  aria-expanded={categoryDropdownOpen}
+                  aria-haspopup="true"
+                  aria-label="Editorial Categories Menu"
+                >
+                  <span className="nav-label">Categories</span>
+                  <ChevronDown
+                    size={14}
+                    className={`nav-chevron ${categoryDropdownOpen ? 'open' : ''}`}
+                  />
+                </button>
+
+                {categoryDropdownOpen && categories.length > 0 && (
+                  <div
+                    className="nav-category-dropdown"
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      backgroundColor: 'var(--color-white)',
+                      boxShadow: 'var(--shadow-lg)',
+                      borderRadius: 'var(--radius-lg)',
+                      border: 'var(--border-subtle)',
+                      padding: '0.6rem',
+                      minWidth: '240px',
+                      zIndex: 1000,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px'
+                    }}
+                  >
+                    {categories.map((cat) => (
+                      <Link
+                        key={cat._id}
+                        to={`/category/${cat.slug}`}
+                        onClick={() => setCategoryDropdownOpen(false)}
+                        style={{
+                          padding: '0.45rem 0.75rem',
+                          borderRadius: 'var(--radius-md)',
+                          fontSize: 'var(--text-sm)',
+                          fontWeight: 500,
+                          color: 'var(--color-forest-dark)',
+                          textDecoration: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          backgroundColor:
+                            pathname === `/category/${cat.slug}` ? 'var(--color-ivory-light)' : 'transparent'
+                        }}
+                      >
+                        <span>{cat.name}</span>
+                        {cat.articleCount > 0 && (
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              color: 'var(--color-text-light)',
+                              background: 'var(--color-ivory-light)',
+                              padding: '1px 6px',
+                              borderRadius: '8px'
+                            }}
+                          >
+                            {cat.articleCount}
+                          </span>
+                        )}
+                      </Link>
+                    ))}
+                    <div style={{ borderTop: 'var(--border-subtle)', marginTop: '4px', paddingTop: '4px' }}>
+                      <Link
+                        to="/blog"
+                        onClick={() => setCategoryDropdownOpen(false)}
+                        style={{
+                          padding: '0.35rem 0.75rem',
+                          fontSize: '12px',
+                          color: 'var(--color-orange)',
+                          fontWeight: 600,
+                          textDecoration: 'none',
+                          display: 'block'
+                        }}
+                      >
+                        View All Desks →
+                      </Link>
+                    </div>
+                  </div>
+                )}
               </li>
               <li className="nav-item">
-                <NavLink to="/about">About</NavLink>
+                <Link to="/about" className={`nav-link ${isAboutActive ? 'active' : ''}`}>
+                  <span className="nav-label">About</span>
+                </Link>
               </li>
               <li className="nav-item">
-                <NavLink to="/contact">Contact</NavLink>
+                <Link to="/contact" className={`nav-link ${isContactActive ? 'active' : ''}`}>
+                  <span className="nav-label">Contact</span>
+                </Link>
               </li>
             </ul>
           </nav>
@@ -189,28 +354,52 @@ const Navbar = () => {
             <Link
               to="/"
               onClick={() => setMobileMenuOpen(false)}
-              style={{ fontWeight: 600, padding: '0.5rem 0' }}
+              style={{
+                fontWeight: isHomeActive ? 700 : 500,
+                color: isHomeActive ? 'var(--color-forest-dark)' : 'var(--color-text-main)',
+                borderLeft: isHomeActive ? '3px solid var(--color-orange)' : '3px solid transparent',
+                padding: '0.4rem 0.6rem',
+                textDecoration: 'none'
+              }}
             >
               Home
             </Link>
             <Link
               to="/blog"
               onClick={() => setMobileMenuOpen(false)}
-              style={{ fontWeight: 600, padding: '0.5rem 0' }}
+              style={{
+                fontWeight: isArticlesActive ? 700 : 500,
+                color: isArticlesActive ? 'var(--color-forest-dark)' : 'var(--color-text-main)',
+                borderLeft: isArticlesActive ? '3px solid var(--color-orange)' : '3px solid transparent',
+                padding: '0.4rem 0.6rem',
+                textDecoration: 'none'
+              }}
             >
               All Articles
             </Link>
             <Link
               to="/about"
               onClick={() => setMobileMenuOpen(false)}
-              style={{ fontWeight: 600, padding: '0.5rem 0' }}
+              style={{
+                fontWeight: isAboutActive ? 700 : 500,
+                color: isAboutActive ? 'var(--color-forest-dark)' : 'var(--color-text-main)',
+                borderLeft: isAboutActive ? '3px solid var(--color-orange)' : '3px solid transparent',
+                padding: '0.4rem 0.6rem',
+                textDecoration: 'none'
+              }}
             >
               About
             </Link>
             <Link
               to="/contact"
               onClick={() => setMobileMenuOpen(false)}
-              style={{ fontWeight: 600, padding: '0.5rem 0' }}
+              style={{
+                fontWeight: isContactActive ? 700 : 500,
+                color: isContactActive ? 'var(--color-forest-dark)' : 'var(--color-text-main)',
+                borderLeft: isContactActive ? '3px solid var(--color-orange)' : '3px solid transparent',
+                padding: '0.4rem 0.6rem',
+                textDecoration: 'none'
+              }}
             >
               Contact
             </Link>

@@ -7,14 +7,14 @@ const {
   updateAuthor,
   deleteAuthor
 } = require('../controllers/authorController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, restrictTo } = require('../middleware/authMiddleware');
 
 router.get('/', getAuthors);
 router.get('/slug/:slug', getAuthorBySlug);
 
-router.post('/', protect, createAuthor);
-router.put('/:id', protect, updateAuthor);
-router.delete('/:id', protect, deleteAuthor);
+router.post('/', protect, restrictTo('admin'), createAuthor);
+router.put('/:id', protect, restrictTo('admin'), updateAuthor);
+router.delete('/:id', protect, restrictTo('admin'), deleteAuthor);
 
 module.exports = router;
 

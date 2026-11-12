@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { authorsAPI } from '../../services/api';
 import { ShieldCheck, Cpu, Sparkles, Feather, BookOpen, CheckCircle } from 'lucide-react';
+import SEOHead from '../../components/common/SEOHead';
 
 const AboutPage = () => {
   const [authors, setAuthors] = useState([]);
@@ -15,6 +16,15 @@ const AboutPage = () => {
 
   return (
     <div className="container" style={{ padding: 'var(--space-12) var(--space-6)' }}>
+      <SEOHead
+        title="Editorial Mission & Research Contributors"
+        description="Learn about TechBlog's mission, research contributors, and editorial standards for software architecture and engineering journalism."
+        canonicalUrl={typeof window !== 'undefined' ? `${window.location.origin}/about` : 'https://techblog.internal/about'}
+        breadcrumbs={[
+          { name: 'Home', item: '/' },
+          { name: 'About', item: '/about' }
+        ]}
+      />
       {/* Hero / Mission Statement */}
       <div style={{ maxWidth: '840px', margin: '0 auto var(--space-16) auto', textAlign: 'center' }}>
         <div className="kicker" style={{ justifyContent: 'center' }}>

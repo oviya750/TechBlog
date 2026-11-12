@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import { articlesAPI } from '../../services/api';
 import ArticleCard from '../../components/common/ArticleCard';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import EmptyState from '../../components/common/EmptyState';
+import NotFoundPage from './NotFoundPage';
+import SEOHead from '../../components/common/SEOHead';
 import {
   Clock,
   Calendar,
@@ -24,24 +26,43 @@ const BlogDetailPage = () => {
   const [navigation, setNavigation] = useState({ previous: null, next: null });
   const [relatedArticles, setRelatedArticles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [readProgress, setReadProgress] = useState(0);
+  const [activeHeading, setActiveHeading] = useState('');
 
+  // Dynamic scroll reading progress indicator
+  useEffect(() => {
+    const handleScroll = () => {
+      const totalScroll = window.scrollY;
+      const windowHeight =
+        document.documentElement.scrollHeight - window.innerHeight;
+      if (windowHeight > 0) {
+        setReadProgress((totalScroll / windowHeight) * 100);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Fetch article detail
   useEffect(() => {
     const fetchArticleDetail = async () => {
       try {
         setLoading(true);
+        setNotFound(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
         const res = await articlesAPI.getBySlug(slug);
-        if (res.data.success) {
+        if (res.data.success && res.data.data) {
           setArticle(res.data.data);
           setNavigation(res.data.data.navigation || { previous: null, next: null });
           setRelatedArticles(res.data.data.relatedArticles || []);
-
-          // Dynamic Document Title and Meta tags for SEO
-          document.title = `${res.data.data.seo?.metaTitle || res.data.data.title} — TechBlog`;
+        } else {
+          setNotFound(true);
         }
       } catch (err) {
         console.error('Failed to load article:', err);
+        setNotFound(true);
       } finally {
         setLoading(false);
       }
@@ -49,6 +70,50 @@ const BlogDetailPage = () => {
 
     fetchArticleDetail();
   }, [slug]);
+
+  // Inject heading IDs and track active TOC heading on scroll
+  useEffect(() => {
+    if (!article?.content) return;
+
+    const timer = setTimeout(() => {
+      const proseEl = document.querySelector('.article-prose');
+      if (!proseEl) return;
+
+      const headings = proseEl.querySelectorAll('h2, h3');
+      const observedElements = [];
+
+      headings.forEach((heading) => {
+        if (!heading.id) {
+          const raw = heading.textContent.trim();
+          heading.id = raw
+            .toLowerCase()
+            .replace(/[^\w\s-]/g, '')
+            .replace(/[\s_-]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        }
+        observedElements.push(heading);
+      });
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              setActiveHeading(entry.target.id);
+            }
+          });
+        },
+        { rootMargin: '-70px 0px -65% 0px', threshold: 0.1 }
+      );
+
+      observedElements.forEach((el) => observer.observe(el));
+
+      return () => {
+        observedElements.forEach((el) => observer.unobserve(el));
+      };
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [article?.content]);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -67,6 +132,16 @@ const BlogDetailPage = () => {
     window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank');
   };
 
+  const handleTocClick = (e, targetId) => {
+    e.preventDefault();
+    const el = document.getElementById(targetId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setActiveHeading(targetId);
+      window.history.pushState(null, '', `#${targetId}`);
+    }
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return 'Recently';
     return new Date(dateStr).toLocaleDateString('en-US', {
@@ -80,17 +155,8 @@ const BlogDetailPage = () => {
     return <LoadingSpinner text="Rendering editorial dispatch..." />;
   }
 
-  if (!article) {
-    return (
-      <div className="container" style={{ padding: '4rem 1.5rem' }}>
-        <EmptyState
-          title="Article Not Found"
-          message="The dispatch you requested could not be located in our publication archives."
-          actionText="Back to Publications"
-          actionLink="/blog"
-        />
-      </div>
-    );
+  if (notFound || !article) {
+    return <NotFoundPage />;
   }
 
   const author = article.author || {
@@ -100,8 +166,54 @@ const BlogDetailPage = () => {
     bio: 'Researches and reports on software architecture paradigms.'
   };
 
+  // Sanitize content with DOMPurify
+  const sanitizedContent = article.content
+    ? DOMPurify.sanitize(article.content, {
+        ALLOWED_TAGS: [
+          'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+          'p', 'a', 'b', 'strong', 'i', 'em', 'mark', 'small', 'del', 'ins', 'sub', 'sup',
+          'ul', 'ol', 'li',
+          'blockquote', 'pre', 'code', 'kbd', 'samp',
+          'table', 'thead', 'tbody', 'tr', 'th', 'td',
+          'img', 'figure', 'figcaption',
+          'iframe', 'div', 'span', 'hr', 'br'
+        ],
+        ALLOWED_ATTR: [
+          'href', 'src', 'alt', 'title', 'class', 'id', 'target', 'rel',
+          'width', 'height', 'loading', 'frameborder', 'allowfullscreen'
+        ]
+      })
+    : '';
+
   return (
     <div className="container" style={{ paddingBottom: 'var(--space-16)' }}>
+      {/* Dynamic Technical SEO, Meta & Structured Data */}
+      <SEOHead
+        title={article.seo?.metaTitle || article.title}
+        description={article.seo?.metaDescription || article.excerpt}
+        keywords={article.seo?.focusKeywords || article.tags}
+        canonicalUrl={`${window.location.origin}/blog/${article.slug}`}
+        ogType="article"
+        ogImage={article.featuredImage?.url}
+        article={article}
+        breadcrumbs={[
+          { name: 'Home', item: '/' },
+          { name: 'Dispatches', item: '/blog' },
+          { name: article.category?.name || 'Category', item: `/category/${article.category?.slug}` },
+          { name: article.title, item: `/blog/${article.slug}` }
+        ]}
+      />
+
+      {/* Top Reading Progress Bar */}
+      <div
+        className="reading-progress-bar"
+        style={{ width: `${Math.min(100, Math.max(0, readProgress))}%` }}
+        role="progressbar"
+        aria-valuenow={Math.round(readProgress)}
+        aria-valuemin="0"
+        aria-valuemax="100"
+      />
+
       {/* 1. Header with Breadcrumbs & Editorial Metadata */}
       <header className="article-detail-header">
         <nav className="breadcrumb-nav" aria-label="Breadcrumb">
@@ -158,6 +270,7 @@ const BlogDetailPage = () => {
           <img
             src={article.featuredImage.url}
             alt={article.featuredImage.altText || article.title}
+            loading="lazy"
           />
           {article.featuredImage.caption && (
             <figcaption
@@ -186,16 +299,20 @@ const BlogDetailPage = () => {
                 <ListTree size={16} /> Table of Contents
               </div>
               <ul className="toc-list">
-                {article.tableOfContents.map((item, idx) => (
-                  <li key={idx}>
-                    <a
-                      href={`#${item.id}`}
-                      className={`toc-link ${item.level === 3 ? 'level-3' : ''}`}
-                    >
-                      {item.text}
-                    </a>
-                  </li>
-                ))}
+                {article.tableOfContents.map((item, idx) => {
+                  const isActive = activeHeading === item.id;
+                  return (
+                    <li key={idx}>
+                      <a
+                        href={`#${item.id}`}
+                        onClick={(e) => handleTocClick(e, item.id)}
+                        className={`toc-link ${item.level === 3 ? 'level-3' : ''} ${isActive ? 'active' : ''}`}
+                      >
+                        {item.text}
+                      </a>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
@@ -237,11 +354,11 @@ const BlogDetailPage = () => {
           </div>
         </aside>
 
-        {/* Main Prose HTML Body */}
+        {/* Main Prose HTML Body with XSS Sanitation */}
         <article>
           <div
             className="article-prose"
-            dangerouslySetInnerHTML={{ __html: article.content }}
+            dangerouslySetInnerHTML={{ __html: sanitizedContent }}
           />
 
           {/* Tags */}
@@ -260,7 +377,7 @@ const BlogDetailPage = () => {
 
           {/* Author Bio Box */}
           <div className="article-author-card">
-            <img src={author.avatar} alt={author.name} className="author-big-avatar" />
+            <img src={author.avatar} alt={author.name} className="author-big-avatar" loading="lazy" />
             <div className="author-details">
               <h4>Written by {author.name}</h4>
               <div className="author-role">{author.role}</div>

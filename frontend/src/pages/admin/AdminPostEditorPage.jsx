@@ -12,7 +12,8 @@ import {
   Eye,
   Calendar,
   Sparkles,
-  Search
+  Search,
+  FileText
 } from 'lucide-react';
 
 const AdminPostEditorPage = () => {
@@ -25,6 +26,7 @@ const AdminPostEditorPage = () => {
   const [loading, setLoading] = useState(isEditMode);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', message: '' });
+  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -102,6 +104,31 @@ const AdminPostEditorPage = () => {
     }
   }, [id, isEditMode]);
 
+  // Auto-restore draft from sessionStorage on new post creation
+  useEffect(() => {
+    if (!isEditMode) {
+      const cached = sessionStorage.getItem('techblog_create_post_draft');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed && (parsed.title || parsed.content || parsed.excerpt)) {
+            setFormData((prev) => ({ ...prev, ...parsed }));
+            if (parsed.slug) setIsSlugManuallyEdited(true);
+          }
+        } catch (err) {
+          console.error('Failed to parse cached draft', err);
+        }
+      }
+    }
+  }, [isEditMode]);
+
+  // Auto-save form state to sessionStorage on /admin/posts/new
+  useEffect(() => {
+    if (!isEditMode && (formData.title || formData.content || formData.excerpt)) {
+      sessionStorage.setItem('techblog_create_post_draft', JSON.stringify(formData));
+    }
+  }, [formData, isEditMode]);
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -110,14 +137,24 @@ const AdminPostEditorPage = () => {
     }));
   };
 
+  const handleSlugChange = (e) => {
+    setIsSlugManuallyEdited(true);
+    setFormData((prev) => ({
+      ...prev,
+      slug: e.target.value
+    }));
+  };
+
   const handleTitleChange = (e) => {
     const newTitle = e.target.value;
     setFormData((prev) => ({
       ...prev,
       title: newTitle,
-      // Auto generate slug if slug hasn't been manually diverged
-      slug: !isEditMode ? newTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : prev.slug,
-      metaTitle: !prev.metaTitle ? newTitle : prev.metaTitle
+      // Auto generate slug if slug hasn't been manually customized
+      slug: !isEditMode && !isSlugManuallyEdited
+        ? newTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+        : prev.slug,
+      metaTitle: !prev.metaTitle || prev.metaTitle === prev.title ? newTitle : prev.metaTitle
     }));
   };
 
@@ -141,9 +178,40 @@ const AdminPostEditorPage = () => {
   };
 
   const handleSubmit = async (targetStatus) => {
-    if (!formData.title || !formData.excerpt || !formData.content) {
-      setFeedback({ type: 'error', message: 'Please provide Title, Excerpt, and Article Content.' });
+    // Precise field-by-field validation with helpful feedback
+    if (!formData.title || !formData.title.trim()) {
+      setFeedback({ type: 'error', message: 'Article Title is required.' });
       return;
+    }
+    if (formData.title.trim().length > 200) {
+      setFeedback({ type: 'error', message: 'Article Title cannot exceed 200 characters.' });
+      return;
+    }
+    if (!formData.excerpt || !formData.excerpt.trim()) {
+      setFeedback({ type: 'error', message: 'Lead Excerpt / Summary is required.' });
+      return;
+    }
+    if (formData.excerpt.trim().length > 500) {
+      setFeedback({ type: 'error', message: 'Summary / Excerpt cannot exceed 500 characters.' });
+      return;
+    }
+    if (!formData.content || !formData.content.trim()) {
+      setFeedback({ type: 'error', message: 'Article Content is required.' });
+      return;
+    }
+    if (!formData.category) {
+      setFeedback({ type: 'error', message: 'Please select a Category Desk for this article.' });
+      return;
+    }
+    if (!formData.author) {
+      setFeedback({ type: 'error', message: 'Please select an Author / Researcher for this article.' });
+      return;
+    }
+    if (targetStatus === 'scheduled' || formData.status === 'scheduled') {
+      if (!formData.scheduledFor || new Date(formData.scheduledFor) <= new Date()) {
+        setFeedback({ type: 'error', message: 'Please provide a future date and time for scheduled release.' });
+        return;
+      }
     }
 
     try {
@@ -153,9 +221,9 @@ const AdminPostEditorPage = () => {
       const finalStatus = targetStatus || formData.status;
 
       const payload = {
-        title: formData.title,
-        slug: formData.slug,
-        excerpt: formData.excerpt,
+        title: formData.title.trim(),
+        slug: formData.slug.trim(),
+        excerpt: formData.excerpt.trim(),
         content: formData.content,
         category: formData.category,
         author: formData.author,
@@ -181,8 +249,19 @@ const AdminPostEditorPage = () => {
         setFeedback({ type: 'success', message: 'Article updated successfully!' });
       } else {
         const res = await articlesAPI.create(payload);
-        setFeedback({ type: 'success', message: 'Article created successfully!' });
-        setTimeout(() => navigate('/admin/posts'), 1200);
+        const created = res.data.data;
+        sessionStorage.removeItem('techblog_create_post_draft');
+        setFeedback({
+          type: 'success',
+          message: finalStatus === 'draft'
+            ? 'Draft saved to database! Redirecting to editor...'
+            : 'Article published successfully!'
+        });
+        if (finalStatus === 'draft') {
+          setTimeout(() => navigate(`/admin/posts/edit/${created._id}`, { replace: true }), 700);
+        } else {
+          setTimeout(() => navigate('/admin/posts'), 1200);
+        }
       }
     } catch (err) {
       setFeedback({
@@ -260,13 +339,27 @@ const AdminPostEditorPage = () => {
         </div>
       )}
 
-      {/* Editor Grid: Main Left, Settings Right */}
+      {/* Editor Grid: Main Left (A, B, F), Settings Right (C, D, E) */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 'var(--space-8)' }}>
-        {/* Left Column: Core Content */}
+        {/* Left Column: Core Editorial & Content */}
         <div>
-          <div className="admin-card">
+          {/* SECTION A: Article Information */}
+          <div className="editor-section-card">
+            <div className="editor-section-header">
+              <div className="editor-section-title">
+                <FileText size={18} color="var(--color-forest)" />
+                <span>Article Information</span>
+              </div>
+              <span className="editor-section-badge">Section A</span>
+            </div>
+
             <div className="form-group">
-              <label className="form-label">Article Title *</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label className="form-label">Article Title *</label>
+                <span style={{ fontSize: 'var(--text-xs)', color: formData.title.length > 180 ? 'var(--color-orange)' : 'var(--color-text-light)' }}>
+                  {formData.title.length} / 200
+                </span>
+              </div>
               <input
                 type="text"
                 value={formData.title}
@@ -274,6 +367,7 @@ const AdminPostEditorPage = () => {
                 placeholder="e.g. Asynchronous Agentic Consensus in Distributed Swarms"
                 className="form-input"
                 style={{ fontSize: '1.25rem', fontWeight: 600 }}
+                maxLength={200}
                 required
               />
             </div>
@@ -288,7 +382,7 @@ const AdminPostEditorPage = () => {
                   type="text"
                   name="slug"
                   value={formData.slug}
-                  onChange={handleChange}
+                  onChange={handleSlugChange}
                   placeholder="article-url-slug"
                   className="form-input"
                   style={{ fontFamily: 'var(--font-code)', fontSize: '0.9rem' }}
@@ -296,8 +390,13 @@ const AdminPostEditorPage = () => {
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Lead Excerpt / Summary *</label>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label className="form-label">Summary / Lead Excerpt *</label>
+                <span style={{ fontSize: 'var(--text-xs)', color: formData.excerpt.length > 450 ? 'var(--color-orange)' : 'var(--color-text-light)' }}>
+                  {formData.excerpt.length} / 500
+                </span>
+              </div>
               <textarea
                 name="excerpt"
                 value={formData.excerpt}
@@ -305,12 +404,23 @@ const AdminPostEditorPage = () => {
                 placeholder="2-3 sentence technical overview summarizing the core findings or thesis..."
                 rows={3}
                 className="form-textarea"
+                maxLength={500}
                 required
               />
             </div>
+          </div>
 
-            <div className="form-group">
-              <label className="form-label">Article Content (Rich Text) *</label>
+          {/* SECTION B: Content Editor */}
+          <div className="editor-section-card">
+            <div className="editor-section-header">
+              <div className="editor-section-title">
+                <Sparkles size={18} color="var(--color-forest)" />
+                <span>Content Editor & Live Preview</span>
+              </div>
+              <span className="editor-section-badge">Section B</span>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
               <RichEditor
                 value={formData.content}
                 onChange={(newVal) => setFormData((prev) => ({ ...prev, content: newVal }))}
@@ -318,14 +428,18 @@ const AdminPostEditorPage = () => {
             </div>
           </div>
 
-          {/* SEO & Search Discovery Card */}
-          <div className="admin-card">
-            <h3 style={{ fontSize: '1.15rem', color: 'var(--color-forest-dark)', marginBottom: 'var(--space-4)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Search size={18} color="var(--color-orange)" /> Search Engine Optimization (SEO)
-            </h3>
+          {/* SECTION F: SEO & Search Discovery */}
+          <div className="editor-section-card">
+            <div className="editor-section-header">
+              <div className="editor-section-title">
+                <Search size={18} color="var(--color-orange)" />
+                <span>SEO & Search Discovery</span>
+              </div>
+              <span className="editor-section-badge">Section F</span>
+            </div>
 
             <div className="form-group">
-              <label className="form-label">Meta Title (SERP)</label>
+              <label className="form-label">SEO Title (SERP)</label>
               <input
                 type="text"
                 name="metaTitle"
@@ -359,16 +473,39 @@ const AdminPostEditorPage = () => {
                 className="form-input"
               />
             </div>
+
+            {/* Live Google SERP Snippet Preview */}
+            <div style={{ marginTop: 'var(--space-6)', paddingTop: 'var(--space-4)', borderTop: 'var(--border-subtle)' }}>
+              <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
+                Live Google SERP Snippet Preview
+              </div>
+              <div className="google-serp-preview">
+                <div className="serp-url">
+                  <span className="serp-url-badge">Search Result</span>
+                  <span>https://techblog.internal › blog › {formData.slug || 'article-slug'}</span>
+                </div>
+                <div className="serp-title">
+                  {formData.metaTitle || formData.title || 'Optimal Article Title — TechBlog'}
+                </div>
+                <div className="serp-desc">
+                  {formData.metaDescription || formData.excerpt || 'Concise article description and summary that will appear in search results...'}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Right Column: Publishing Sidebar Settings */}
+        {/* Right Column: Publishing Sidebar Settings (C, D, E) */}
         <div>
-          {/* Publishing Controls Card */}
-          <div className="admin-card">
-            <h3 style={{ fontSize: '1.15rem', color: 'var(--color-forest-dark)', marginBottom: 'var(--space-4)' }}>
-              Publishing Status
-            </h3>
+          {/* SECTION C: Publishing Settings */}
+          <div className="editor-section-card">
+            <div className="editor-section-header">
+              <div className="editor-section-title">
+                <Calendar size={18} color="var(--color-forest)" />
+                <span>Publishing Settings</span>
+              </div>
+              <span className="editor-section-badge">Section C</span>
+            </div>
 
             <div className="form-group">
               <label className="form-label">Publication State</label>
@@ -418,13 +555,38 @@ const AdminPostEditorPage = () => {
                 <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>Mark as Trending Dispatch</span>
               </label>
             </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: 'var(--space-4)', paddingTop: 'var(--space-4)', borderTop: 'var(--border-subtle)' }}>
+              <button
+                type="button"
+                onClick={() => handleSubmit('draft')}
+                disabled={saving}
+                className="btn btn-secondary btn-sm"
+                style={{ flex: 1 }}
+              >
+                Save Draft
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSubmit('published')}
+                disabled={saving}
+                className="btn btn-primary btn-sm"
+                style={{ flex: 1 }}
+              >
+                <Save size={14} /> Publish
+              </button>
+            </div>
           </div>
 
-          {/* Taxonomy & Metadata Card */}
-          <div className="admin-card">
-            <h3 style={{ fontSize: '1.15rem', color: 'var(--color-forest-dark)', marginBottom: 'var(--space-4)' }}>
-              Taxonomy & Desk
-            </h3>
+          {/* SECTION D: Taxonomy */}
+          <div className="editor-section-card">
+            <div className="editor-section-header">
+              <div className="editor-section-title">
+                <Eye size={18} color="var(--color-forest)" />
+                <span>Taxonomy & Desks</span>
+              </div>
+              <span className="editor-section-badge">Section D</span>
+            </div>
 
             <div className="form-group">
               <label className="form-label">Category Desk *</label>
@@ -462,7 +624,7 @@ const AdminPostEditorPage = () => {
               </select>
             </div>
 
-            <div className="form-group">
+            <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Tags (comma-separated)</label>
               <input
                 type="text"
@@ -475,14 +637,18 @@ const AdminPostEditorPage = () => {
             </div>
           </div>
 
-          {/* Featured Image Asset Card */}
-          <div className="admin-card">
-            <h3 style={{ fontSize: '1.15rem', color: 'var(--color-forest-dark)', marginBottom: 'var(--space-4)' }}>
-              Featured Media Asset
-            </h3>
+          {/* SECTION E: Media */}
+          <div className="editor-section-card">
+            <div className="editor-section-header">
+              <div className="editor-section-title">
+                <ImageIcon size={18} color="var(--color-forest)" />
+                <span>Featured Media Asset</span>
+              </div>
+              <span className="editor-section-badge">Section E</span>
+            </div>
 
             {formData.featuredImageUrl && (
-              <div style={{ height: '140px', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: 'var(--space-3)' }}>
+              <div style={{ height: '140px', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: 'var(--space-3)', border: '1px solid rgba(7,63,50,0.1)' }}>
                 <img
                   src={formData.featuredImageUrl}
                   alt="Preview"
@@ -522,6 +688,18 @@ const AdminPostEditorPage = () => {
                 value={formData.featuredImageAlt}
                 onChange={handleChange}
                 placeholder="Descriptive image text"
+                className="form-input"
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Image Caption</label>
+              <input
+                type="text"
+                name="featuredImageCaption"
+                value={formData.featuredImageCaption}
+                onChange={handleChange}
+                placeholder="Editorial caption displayed under image"
                 className="form-input"
               />
             </div>

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { tagsAPI } from '../../services/api';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { Tags, Plus, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Tags, Plus, Trash2, CheckCircle, AlertCircle, Edit2, Check, X } from 'lucide-react';
 
 const AdminTagsPage = () => {
   const [tags, setTags] = useState([]);
   const [newTagName, setNewTagName] = useState('');
+  const [editingTagId, setEditingTagId] = useState(null);
+  const [editTagName, setEditTagName] = useState('');
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState({ type: '', message: '' });
 
@@ -39,7 +41,23 @@ const AdminTagsPage = () => {
         fetchTags();
       }
     } catch (err) {
-      setFeedback({ type: 'error', message: 'Failed to add tag.' });
+      setFeedback({ type: 'error', message: err.response?.data?.message || 'Failed to add tag.' });
+    }
+  };
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    if (!editTagName.trim() || !editingTagId) return;
+
+    try {
+      const res = await tagsAPI.update(editingTagId, { name: editTagName.trim() });
+      if (res.data.success) {
+        setFeedback({ type: 'success', message: 'Tag renamed successfully.' });
+        setEditingTagId(null);
+        fetchTags();
+      }
+    } catch (err) {
+      setFeedback({ type: 'error', message: err.response?.data?.message || 'Failed to rename tag.' });
     }
   };
 
@@ -50,7 +68,7 @@ const AdminTagsPage = () => {
         setTags(tags.filter((t) => t._id !== id));
         setFeedback({ type: 'success', message: 'Tag removed.' });
       } catch (err) {
-        alert('Failed to delete tag.');
+        setFeedback({ type: 'error', message: 'Failed to delete tag.' });
       }
     }
   };
@@ -128,37 +146,88 @@ const AdminTagsPage = () => {
                   fontSize: 'var(--text-sm)'
                 }}
               >
-                <span style={{ fontWeight: 600, color: 'var(--color-forest-dark)' }}>#{tag.name}</span>
-                {tag.count > 0 && (
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      background: 'var(--color-sage-light)',
-                      color: 'var(--color-sage-dark)',
-                      padding: '1px 6px',
-                      borderRadius: '10px',
-                      fontWeight: 700
-                    }}
-                  >
-                    {tag.count}
-                  </span>
+                {editingTagId === tag._id ? (
+                  <form onSubmit={handleUpdate} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <input
+                      type="text"
+                      value={editTagName}
+                      onChange={(e) => setEditTagName(e.target.value)}
+                      className="form-input"
+                      style={{ padding: '0.2rem 0.5rem', fontSize: '13px', width: '130px', height: '28px' }}
+                      autoFocus
+                    />
+                    <button
+                      type="submit"
+                      className="btn btn-primary btn-sm"
+                      style={{ padding: '0.2rem 0.5rem', height: '28px' }}
+                      title="Save"
+                    >
+                      <Check size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingTagId(null)}
+                      className="btn btn-ghost btn-sm"
+                      style={{ padding: '0.2rem 0.4rem', height: '28px' }}
+                      title="Cancel"
+                    >
+                      <X size={13} />
+                    </button>
+                  </form>
+                ) : (
+                  <>
+                    <span style={{ fontWeight: 600, color: 'var(--color-forest-dark)' }}>#{tag.name}</span>
+                    {tag.count > 0 && (
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          background: 'var(--color-sage-light)',
+                          color: 'var(--color-sage-dark)',
+                          padding: '1px 6px',
+                          borderRadius: '10px',
+                          fontWeight: 700
+                        }}
+                      >
+                        {tag.count}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingTagId(tag._id);
+                        setEditTagName(tag.name);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--color-text-muted)',
+                        padding: 0,
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                      title="Rename tag"
+                    >
+                      <Edit2 size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(tag._id, tag.name)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--color-text-light)',
+                        padding: 0,
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                      title="Remove tag"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </>
                 )}
-                <button
-                  type="button"
-                  onClick={() => handleDelete(tag._id, tag.name)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: 'var(--color-text-light)',
-                    padding: 0,
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}
-                  title="Remove tag"
-                >
-                  <Trash2 size={13} />
-                </button>
               </div>
             ))}
           </div>

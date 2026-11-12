@@ -71,12 +71,12 @@ const Footer = () => {
                 <Link to="/contact">Corrections & Ethics</Link>
               </li>
               <li>
-                <a href="/api/seo/sitemap.xml" target="_blank" rel="noopener noreferrer">
+                <a href="/sitemap.xml" target="_blank" rel="noopener noreferrer">
                   XML Sitemap
                 </a>
               </li>
               <li>
-                <a href="/api/seo/robots.txt" target="_blank" rel="noopener noreferrer">
+                <a href="/robots.txt" target="_blank" rel="noopener noreferrer">
                   Robots Index
                 </a>
               </li>
@@ -131,11 +131,11 @@ const Footer = () => {
               <LinkedInIcon size={16} />
             </a>
             <a
-              href="/api/seo/sitemap.xml"
+              href="/sitemap.xml"
               target="_blank"
               rel="noopener noreferrer"
               className="footer-social-btn"
-              title="RSS / Sitemap Feed"
+              title="XML Sitemap Feed"
             >
               <Rss size={16} />
             </a>

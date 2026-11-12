@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Lock, Mail, Terminal, ArrowRight, AlertCircle, ShieldCheck } from 'lucide-react';
+import SEOHead from '../../components/common/SEOHead';
 
 const AdminLoginPage = () => {
   const [email, setEmail] = useState('');
@@ -14,6 +15,7 @@ const AdminLoginPage = () => {
   const location = useLocation();
 
   const from = location.state?.from?.pathname || '/admin';
+  const isSessionExpired = location.search.includes('expired=true');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,6 +48,7 @@ const AdminLoginPage = () => {
         padding: '2rem 1rem'
       }}
     >
+      <SEOHead title="Staff Authentication" noindex={true} />
       <div
         style={{
           width: '100%',
@@ -72,6 +75,26 @@ const AdminLoginPage = () => {
             TechBlog Content Management & Publishing System
           </p>
         </div>
+
+        {isSessionExpired && !error && (
+          <div
+            style={{
+              backgroundColor: 'rgba(244, 119, 40, 0.12)',
+              color: 'var(--color-orange-dark, #b54708)',
+              border: '1px solid rgba(244, 119, 40, 0.3)',
+              padding: '0.75rem 1rem',
+              borderRadius: 'var(--radius-md)',
+              marginBottom: '1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: 'var(--text-sm)'
+            }}
+          >
+            <AlertCircle size={16} />
+            <span>Your editorial session expired or the account was updated. Please sign in again.</span>
+          </div>
+        )}
 
         {error && (
           <div

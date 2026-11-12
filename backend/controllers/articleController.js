@@ -1,6 +1,7 @@
 const Article = require('../models/Article');
 const Category = require('../models/Category');
 const Author = require('../models/Author');
+const Tag = require('../models/Tag');
 const slugify = require('slugify');
 
 // Helper to auto-generate table of contents from HTML headings
@@ -20,16 +21,44 @@ const extractTableOfContents = (contentHtml) => {
   return toc;
 };
 
-// Helper: auto-publish scheduled articles
+// Helper: auto-publish scheduled articles and update category/author counts
 const checkScheduledArticles = async () => {
   try {
     const now = new Date();
-    await Article.updateMany(
-      { status: 'scheduled', scheduledFor: { $lte: now } },
-      { $set: { status: 'published', publishedAt: now } }
-    );
+    const scheduled = await Article.find({
+      status: 'scheduled',
+      scheduledFor: { $lte: now }
+    });
+
+    for (const art of scheduled) {
+      art.status = 'published';
+      art.publishedAt = art.scheduledFor || now;
+      await art.save();
+
+      if (art.category) {
+        await Category.findByIdAndUpdate(art.category, { $inc: { articleCount: 1 } });
+      }
+      if (art.author) {
+        await Author.findByIdAndUpdate(art.author, { $inc: { articleCount: 1 } });
+      }
+    }
+    return scheduled.length;
   } catch (err) {
     console.error('Error auto-publishing scheduled articles:', err);
+    return 0;
+  }
+};
+
+const triggerPublishScheduled = async (req, res, next) => {
+  try {
+    const count = await checkScheduledArticles();
+    res.status(200).json({
+      success: true,
+      message: `Scheduled publications checked: ${count} transitioned to published.`,
+      count
+    });
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -55,11 +84,11 @@ const getArticles = async (req, res, next) => {
 
     const query = {};
 
-    // Status filter: Public queries only see 'published'
-    if (req.query.allStatus === 'true' && req.user) {
+    // Status filter: Public queries MUST ALWAYS only see 'published' articles
+    if (req.user && req.query.allStatus === 'true') {
       if (req.query.status) query.status = req.query.status;
     } else {
-      query.status = status;
+      query.status = 'published';
     }
 
     // Category filter by Slug or ObjectId
@@ -162,12 +191,21 @@ const getFeaturedArticles = async (req, res, next) => {
 // @access  Public
 const getTrendingArticles = async (req, res, next) => {
   try {
-    const articles = await Article.find({ status: 'published' })
+    let articles = await Article.find({ status: 'published', isTrending: true })
       .populate('category', 'name slug color icon')
       .populate('author', 'name slug role avatar')
-      .sort('-viewsCount -publishedAt')
+      .sort('-publishedAt')
       .limit(5)
       .lean();
+
+    if (articles.length === 0) {
+      articles = await Article.find({ status: 'published' })
+        .populate('category', 'name slug color icon')
+        .populate('author', 'name slug role avatar')
+        .sort('-viewsCount -publishedAt')
+        .limit(5)
+        .lean();
+    }
 
     res.status(200).json({
       success: true,
@@ -184,7 +222,13 @@ const getTrendingArticles = async (req, res, next) => {
 // @access  Public
 const getArticleBySlug = async (req, res, next) => {
   try {
-    const article = await Article.findOne({ slug: req.params.slug.toLowerCase() })
+    const query = { slug: req.params.slug.toLowerCase() };
+    // Public requests without admin session can only access published articles
+    if (!req.user) {
+      query.status = 'published';
+    }
+
+    const article = await Article.findOne(query)
       .populate('category', 'name slug color icon description')
       .populate('author', 'name slug role avatar bio socialLinks')
       .lean();
@@ -227,10 +271,16 @@ const getArticleBySlug = async (req, res, next) => {
       .limit(3)
       .lean();
 
+    const tableOfContents =
+      article.tableOfContents && article.tableOfContents.length > 0
+        ? article.tableOfContents
+        : extractTableOfContents(article.content);
+
     res.status(200).json({
       success: true,
       data: {
         ...article,
+        tableOfContents,
         navigation: {
           previous: prevArticle || null,
           next: nextArticle || null
@@ -290,6 +340,29 @@ const createArticle = async (req, res, next) => {
       seo
     } = req.body;
 
+    // Validate required fields with explicit helpful messages
+    if (!title || !title.trim()) {
+      return res.status(400).json({ success: false, message: 'Article title is required.' });
+    }
+    if (title.trim().length > 200) {
+      return res.status(400).json({ success: false, message: 'Title cannot exceed 200 characters.' });
+    }
+    if (!excerpt || !excerpt.trim()) {
+      return res.status(400).json({ success: false, message: 'Article excerpt is required.' });
+    }
+    if (excerpt.trim().length > 500) {
+      return res.status(400).json({ success: false, message: 'Excerpt cannot exceed 500 characters.' });
+    }
+    if (!content || !content.trim()) {
+      return res.status(400).json({ success: false, message: 'Article content is required.' });
+    }
+    if (!category) {
+      return res.status(400).json({ success: false, message: 'Category is required.' });
+    }
+    if (!author) {
+      return res.status(400).json({ success: false, message: 'Author is required.' });
+    }
+
     // Generate unique slug if not supplied or format slug
     let generatedSlug = slug
       ? slugify(slug, { lower: true, strict: true })
@@ -309,13 +382,19 @@ const createArticle = async (req, res, next) => {
     // Auto extract TOC if not provided
     const tableOfContents = extractTableOfContents(content);
 
+    const parsedTags = Array.isArray(tags)
+      ? tags.map(t => typeof t === 'string' ? t.trim() : '').filter(Boolean)
+      : typeof tags === 'string'
+      ? tags.split(',').map(t => t.trim()).filter(Boolean)
+      : [];
+
     const article = await Article.create({
-      title,
+      title: title.trim(),
       slug: generatedSlug,
-      excerpt,
+      excerpt: excerpt.trim(),
       content,
       category,
-      tags: Array.isArray(tags) ? tags : typeof tags === 'string' ? tags.split(',').map(t => t.trim()) : [],
+      tags: parsedTags,
       author,
       featuredImage: featuredImage || undefined,
       isFeatured: !!isFeatured,
@@ -325,12 +404,25 @@ const createArticle = async (req, res, next) => {
       scheduledFor: status === 'scheduled' ? scheduledFor : null,
       readTimeMinutes: readTimeMinutes || undefined,
       seo: seo || {
-        metaTitle: title,
-        metaDescription: excerpt,
+        metaTitle: title.trim(),
+        metaDescription: excerpt.trim(),
         ogImage: featuredImage?.url || ''
       },
       tableOfContents
     });
+
+    // Upsert tags into Tag collection
+    if (parsedTags.length > 0) {
+      for (const tName of parsedTags) {
+        if (!tName) continue;
+        const tSlug = slugify(tName, { lower: true, strict: true });
+        await Tag.findOneAndUpdate(
+          { slug: tSlug },
+          { $setOnInsert: { name: tName, slug: tSlug } },
+          { upsert: true }
+        );
+      }
+    }
 
     // Update counts on Category & Author
     if (status === 'published') {
@@ -408,6 +500,19 @@ const updateArticle = async (req, res, next) => {
       await Author.findByIdAndUpdate(prevAuthor, { $inc: { articleCount: -1 } });
     }
 
+    // Upsert tags into Tag collection if tags modified
+    if (updatedArticle.tags && updatedArticle.tags.length > 0) {
+      for (const tName of updatedArticle.tags) {
+        if (!tName) continue;
+        const tSlug = slugify(tName, { lower: true, strict: true });
+        await Tag.findOneAndUpdate(
+          { slug: tSlug },
+          { $setOnInsert: { name: tName, slug: tSlug } },
+          { upsert: true }
+        );
+      }
+    }
+
     res.status(200).json({
       success: true,
       message: 'Article updated successfully',
@@ -457,6 +562,7 @@ module.exports = {
   createArticle,
   updateArticle,
   deleteArticle,
-  checkScheduledArticles
+  checkScheduledArticles,
+  triggerPublishScheduled
 };
 

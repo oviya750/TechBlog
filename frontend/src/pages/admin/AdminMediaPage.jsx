@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { mediaAPI } from '../../services/api';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { Upload, Copy, Check, Image as ImageIcon, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Upload, Copy, Check, Image as ImageIcon, Sparkles, CheckCircle2, Trash2 } from 'lucide-react';
 
 const AdminMediaPage = () => {
   const [mediaList, setMediaList] = useState([]);
@@ -51,11 +51,23 @@ const AdminMediaPage = () => {
   };
 
   const copyUrl = (url, id) => {
-    // If relative path, prefix origin
     const fullUrl = url.startsWith('http') ? url : `${window.location.origin}${url}`;
     navigator.clipboard.writeText(fullUrl);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleDelete = async (id, name) => {
+    if (window.confirm(`Delete media asset "${name}"?`)) {
+      try {
+        await mediaAPI.delete(id);
+        setMediaList(mediaList.filter((m) => m.id !== id));
+        setNotification('Asset removed from server storage.');
+        setTimeout(() => setNotification(''), 3000);
+      } catch (err) {
+        alert(err.response?.data?.message || 'Delete failed.');
+      }
+    }
   };
 
   return (
@@ -154,21 +166,34 @@ const AdminMediaPage = () => {
                     {Math.round(item.size / 1024)} KB
                   </span>
 
-                  <button
-                    onClick={() => copyUrl(item.url, item.id)}
-                    className="btn btn-secondary btn-sm"
-                    style={{ padding: '0.3rem 0.65rem', fontSize: '11px' }}
-                  >
-                    {copiedId === item.id ? (
-                      <>
-                        <Check size={12} color="var(--color-success)" /> Copied!
-                      </>
-                    ) : (
-                      <>
-                        <Copy size={12} /> Copy URL
-                      </>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      onClick={() => copyUrl(item.url, item.id)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ padding: '0.3rem 0.65rem', fontSize: '11px' }}
+                    >
+                      {copiedId === item.id ? (
+                        <>
+                          <Check size={12} color="var(--color-success)" /> Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={12} /> Copy URL
+                        </>
+                      )}
+                    </button>
+
+                    {item.storage === 'local' && (
+                      <button
+                        onClick={() => handleDelete(item.id, item.name)}
+                        className="btn btn-ghost btn-sm"
+                        style={{ padding: '0.3rem 0.5rem', color: 'var(--color-error)' }}
+                        title="Delete image"
+                      >
+                        <Trash2 size={12} />
+                      </button>
                     )}
-                  </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -180,4 +205,3 @@ const AdminMediaPage = () => {
 };
 
 export default AdminMediaPage;
-

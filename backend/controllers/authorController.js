@@ -134,10 +134,29 @@ const deleteAuthor = async (req, res, next) => {
   try {
     const articleCount = await Article.countDocuments({ author: req.params.id });
     if (articleCount > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot delete author: ${articleCount} articles are assigned to this author. Reassign articles first.`
-      });
+      const { reassignTo } = req.body || {};
+      if (reassignTo) {
+        if (reassignTo === req.params.id) {
+          return res.status(400).json({
+            success: false,
+            message: 'Target author for reassignment cannot be the author being deleted.'
+          });
+        }
+        const targetAuthor = await Author.findById(reassignTo);
+        if (!targetAuthor) {
+          return res.status(404).json({
+            success: false,
+            message: 'Target author for reassignment was not found.'
+          });
+        }
+        // Reassign all associated articles to targetAuthor
+        await Article.updateMany({ author: req.params.id }, { author: reassignTo });
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot delete author: ${articleCount} articles are assigned to this author. Reassign articles first or specify reassignTo.`
+        });
+      }
     }
 
     const author = await Author.findByIdAndDelete(req.params.id);

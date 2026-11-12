@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { publicAPI } from '../../services/api';
 import { Mail, MapPin, Send, CheckCircle2, AlertCircle } from 'lucide-react';
+import SEOHead from '../../components/common/SEOHead';
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
@@ -45,6 +46,15 @@ const ContactPage = () => {
 
   return (
     <div className="container" style={{ padding: 'var(--space-12) var(--space-6)' }}>
+      <SEOHead
+        title="Contact Editorial Desk & Staff"
+        description="Submit pitch proposals, architectural case studies, or corrections directly to the TechBlog editorial staff."
+        canonicalUrl={typeof window !== 'undefined' ? `${window.location.origin}/contact` : 'https://techblog.internal/contact'}
+        breadcrumbs={[
+          { name: 'Home', item: '/' },
+          { name: 'Contact', item: '/contact' }
+        ]}
+      />
       <div style={{ maxWidth: '680px', margin: '0 auto var(--space-12) auto', textAlign: 'center' }}>
         <div className="kicker" style={{ justifyContent: 'center' }}>
           Get in Touch
