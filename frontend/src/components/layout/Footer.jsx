@@ -1,9 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Terminal, Rss } from 'lucide-react';
-import { TwitterIcon, LinkedInIcon, GitHubIcon } from '../common/SocialIcons';
+import { Terminal, Rss, Mail } from 'lucide-react';
+import { TwitterIcon, LinkedInIcon, GitHubIcon, ThreadsIcon } from '../common/SocialIcons';
 
 const Footer = () => {
+  // Configurable Threads profile URL; displays non-clickable 'Coming Soon' when unset
+  const threadsUrl = '';
   return (
     <footer className="site-footer">
       <div className="container">
@@ -104,11 +106,12 @@ const Footer = () => {
 
           <div className="footer-social-row">
             <a
-              href="https://github.com"
+              href="https://github.com/oviya750"
               target="_blank"
               rel="noopener noreferrer"
               className="footer-social-btn"
               title="GitHub"
+              aria-label="GitHub"
             >
               <GitHubIcon size={16} />
             </a>
@@ -118,17 +121,51 @@ const Footer = () => {
               rel="noopener noreferrer"
               className="footer-social-btn"
               title="Twitter"
+              aria-label="Twitter"
             >
               <TwitterIcon size={16} />
             </a>
             <a
-              href="https://linkedin.com"
+              href="https://www.linkedin.com/in/oviya2006/"
               target="_blank"
               rel="noopener noreferrer"
               className="footer-social-btn"
               title="LinkedIn"
+              aria-label="LinkedIn"
             >
               <LinkedInIcon size={16} />
+            </a>
+            {/* Threads: configurable profile URL, displays as Coming Soon when unset */}
+            {threadsUrl ? (
+              <a
+                href={threadsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="footer-social-btn"
+                title="Threads"
+                aria-label="Threads"
+              >
+                <ThreadsIcon size={16} />
+              </a>
+            ) : (
+              <span
+                className="footer-social-btn footer-social-btn-disabled"
+                title="Threads (Coming Soon)"
+                aria-label="Threads (Coming Soon)"
+                role="button"
+                tabIndex={-1}
+                aria-disabled="true"
+              >
+                <ThreadsIcon size={16} />
+              </span>
+            )}
+            <a
+              href="mailto:oviya8466@gmail.com"
+              className="footer-social-btn"
+              title="Email Editorial Desk"
+              aria-label="Email Editorial Desk"
+            >
+              <Mail size={16} />
             </a>
             <a
               href="/sitemap.xml"
@@ -136,6 +173,7 @@ const Footer = () => {
               rel="noopener noreferrer"
               className="footer-social-btn"
               title="XML Sitemap Feed"
+              aria-label="XML Sitemap Feed"
             >
               <Rss size={16} />
             </a>

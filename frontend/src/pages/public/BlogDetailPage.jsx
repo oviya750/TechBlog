@@ -15,9 +15,10 @@ import {
   ChevronLeft,
   ChevronRight,
   ListTree,
-  Bookmark
+  Bookmark,
+  Mail
 } from 'lucide-react';
-import { TwitterIcon, LinkedInIcon } from '../../components/common/SocialIcons';
+import { TwitterIcon, LinkedInIcon, GitHubIcon, ThreadsIcon } from '../../components/common/SocialIcons';
 
 const BlogDetailPage = () => {
   const { slug } = useParams();
@@ -378,9 +379,56 @@ const BlogDetailPage = () => {
           {/* Author Bio Box */}
           <div className="article-author-card">
             <img src={author.avatar} alt={author.name} className="author-big-avatar" loading="lazy" />
-            <div className="author-details">
-              <h4>Written by {author.name}</h4>
-              <div className="author-role">{author.role}</div>
+            <div className="author-details" style={{ width: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                <div>
+                  <h4>Written by {author.name}</h4>
+                  <div className="author-role">{author.role}</div>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <a
+                    href="https://github.com/oviya750"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="footer-social-btn"
+                    title={`${author.name} on GitHub`}
+                    aria-label="GitHub"
+                    style={{ width: '30px', height: '30px', backgroundColor: 'var(--color-sage-light)', color: 'var(--color-forest)' }}
+                  >
+                    <GitHubIcon size={14} />
+                  </a>
+                  <a
+                    href="https://www.linkedin.com/in/oviya2006/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="footer-social-btn"
+                    title={`${author.name} on LinkedIn`}
+                    aria-label="LinkedIn"
+                  >
+                    <LinkedInIcon size={14} />
+                  </a>
+                  <span
+                    className="footer-social-btn footer-social-btn-disabled"
+                    title="Threads (Coming Soon)"
+                    aria-label="Threads (Coming Soon)"
+                    role="button"
+                    tabIndex={-1}
+                    aria-disabled="true"
+                    style={{ width: '30px', height: '30px', backgroundColor: 'var(--color-sage-light)', color: 'var(--color-forest)', opacity: 0.55 }}
+                  >
+                    <ThreadsIcon size={14} />
+                  </span>
+                  <a
+                    href="mailto:oviya8466@gmail.com"
+                    className="footer-social-btn"
+                    title="Email Author"
+                    aria-label="Email Author"
+                    style={{ width: '30px', height: '30px', backgroundColor: 'var(--color-sage-light)', color: 'var(--color-forest)' }}
+                  >
+                    <Mail size={14} />
+                  </a>
+                </div>
+              </div>
               <p className="author-bio">{author.bio}</p>
             </div>
           </div>

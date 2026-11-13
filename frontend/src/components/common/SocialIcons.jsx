@@ -48,3 +48,21 @@ export const GitHubIcon = ({ size = 16, color = 'currentColor' }) => (
   </svg>
 );
 
+export const ThreadsIcon = ({ size = 16, color = 'currentColor' }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M19 7.5c-1.333 -1 -3.333 -1.5 -6 -1.5c-5 0 -8 3.5 -8 9s3.5 9 8 9s7 -3 7 -8s-1 -5 -3 -5s-4 1.5 -4 4.5c0 2.5 1.5 3.5 3 3.5c1.5 0 2.5 -1 2.5 -2.5" />
+  </svg>
+);
+
+// Backward-compatible alias replacing legacy Instagram references with Threads
+export const InstagramIcon = ThreadsIcon;
+

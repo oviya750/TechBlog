@@ -9,8 +9,9 @@ const AdminSettingsPage = () => {
     tagline: 'The Engineering & Technology Editorial',
     readingSpeedWpm: 200,
     twitterUrl: 'https://twitter.com/techblog',
-    githubUrl: 'https://github.com/techblog',
-    linkedinUrl: 'https://linkedin.com/company/techblog',
+    githubUrl: 'https://github.com/oviya750',
+    linkedinUrl: 'https://www.linkedin.com/in/oviya2006/',
+    threadsUrl: '',
     enableComments: false,
     enableNewsletterPopup: true
   });
@@ -29,8 +30,9 @@ const AdminSettingsPage = () => {
             tagline: s.tagline || 'The Engineering & Technology Editorial',
             readingSpeedWpm: s.readingSpeedWpm || 200,
             twitterUrl: s.twitterUrl || '',
-            githubUrl: s.githubUrl || '',
-            linkedinUrl: s.linkedinUrl || '',
+            githubUrl: s.githubUrl || 'https://github.com/oviya750',
+            linkedinUrl: s.linkedinUrl || 'https://www.linkedin.com/in/oviya2006/',
+            threadsUrl: s.threadsUrl || '',
             enableComments: !!s.enableComments,
             enableNewsletterPopup: s.enableNewsletterPopup !== false
           });
@@ -167,6 +169,17 @@ const AdminSettingsPage = () => {
               value={settings.linkedinUrl}
               onChange={(e) => setSettings({ ...settings, linkedinUrl: e.target.value })}
               className="form-input"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Threads Profile URL (optional — leave blank for Coming Soon)</label>
+            <input
+              type="url"
+              value={settings.threadsUrl || ''}
+              onChange={(e) => setSettings({ ...settings, threadsUrl: e.target.value })}
+              className="form-input"
+              placeholder="https://www.threads.net/@yourhandle"
             />
           </div>
         </div>

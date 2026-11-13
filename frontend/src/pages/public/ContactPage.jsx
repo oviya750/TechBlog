@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { publicAPI } from '../../services/api';
 import { Mail, MapPin, Send, CheckCircle2, AlertCircle } from 'lucide-react';
 import SEOHead from '../../components/common/SEOHead';
+import { LinkedInIcon, GitHubIcon, ThreadsIcon } from '../../components/common/SocialIcons';
 
 const ContactPage = () => {
+  // Configurable Threads profile URL; displays non-clickable 'Coming Soon' when unset
+  const threadsUrl = '';
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -107,7 +110,12 @@ const ContactPage = () => {
                 <Mail size={20} color="var(--color-peach)" />
                 <div>
                   <div style={{ fontSize: 'var(--text-xs)', color: 'rgba(255,255,255,0.6)' }}>Editorial Queries</div>
-                  <div style={{ fontWeight: 600 }}>editors@techblog.internal</div>
+                  <a
+                    href="mailto:oviya8466@gmail.com"
+                    style={{ fontWeight: 600, color: 'var(--color-white)', textDecoration: 'none' }}
+                  >
+                    oviya8466@gmail.com
+                  </a>
                 </div>
               </div>
 
@@ -117,6 +125,65 @@ const ContactPage = () => {
                   <div style={{ fontSize: 'var(--text-xs)', color: 'rgba(255,255,255,0.6)' }}>Headquarters</div>
                   <div style={{ fontWeight: 600 }}>TechBlog Media, Engineering Hub 4</div>
                 </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.15)' }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'rgba(255,255,255,0.6)', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+                Official Social Profiles
+              </div>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <a
+                  href="https://github.com/oviya750"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="footer-social-btn"
+                  title="GitHub (oviya750)"
+                  aria-label="GitHub"
+                >
+                  <GitHubIcon size={16} />
+                </a>
+                <a
+                  href="https://www.linkedin.com/in/oviya2006/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="footer-social-btn"
+                  title="LinkedIn (oviya2006)"
+                  aria-label="LinkedIn"
+                >
+                  <LinkedInIcon size={16} />
+                </a>
+                {threadsUrl ? (
+                  <a
+                    href={threadsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="footer-social-btn"
+                    title="Threads"
+                    aria-label="Threads"
+                  >
+                    <ThreadsIcon size={16} />
+                  </a>
+                ) : (
+                  <span
+                    className="footer-social-btn footer-social-btn-disabled"
+                    title="Threads (Coming Soon)"
+                    aria-label="Threads (Coming Soon)"
+                    role="button"
+                    tabIndex={-1}
+                    aria-disabled="true"
+                  >
+                    <ThreadsIcon size={16} />
+                  </span>
+                )}
+                <a
+                  href="mailto:oviya8466@gmail.com"
+                  className="footer-social-btn"
+                  title="Send Email"
+                  aria-label="Send Email"
+                >
+                  <Mail size={16} />
+                </a>
               </div>
             </div>
           </div>

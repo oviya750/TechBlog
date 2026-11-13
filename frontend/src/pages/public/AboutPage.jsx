@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { authorsAPI } from '../../services/api';
-import { ShieldCheck, Cpu, Sparkles, Feather, BookOpen, CheckCircle } from 'lucide-react';
+import { ShieldCheck, Cpu, Sparkles, Feather, BookOpen, CheckCircle, Mail } from 'lucide-react';
 import SEOHead from '../../components/common/SEOHead';
+import { LinkedInIcon, GitHubIcon, ThreadsIcon } from '../../components/common/SocialIcons';
 
 const AboutPage = () => {
   const [authors, setAuthors] = useState([]);
@@ -179,6 +180,50 @@ const AboutPage = () => {
               <p style={{ color: 'var(--color-text-muted)', fontSize: '0.925rem', lineHeight: '1.6' }}>
                 {author.bio}
               </p>
+              <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: 'var(--border-subtle)', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <a
+                  href="https://github.com/oviya750"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="footer-social-btn"
+                  title="GitHub"
+                  aria-label="GitHub"
+                  style={{ width: '32px', height: '32px', backgroundColor: 'var(--color-sage-light)', color: 'var(--color-forest)' }}
+                >
+                  <GitHubIcon size={14} />
+                </a>
+                <a
+                  href="https://www.linkedin.com/in/oviya2006/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="footer-social-btn"
+                  title="LinkedIn"
+                  aria-label="LinkedIn"
+                  style={{ width: '32px', height: '32px', backgroundColor: 'var(--color-sage-light)', color: 'var(--color-forest)' }}
+                >
+                  <LinkedInIcon size={14} />
+                </a>
+                <span
+                  className="footer-social-btn footer-social-btn-disabled"
+                  title="Threads (Coming Soon)"
+                  aria-label="Threads (Coming Soon)"
+                  role="button"
+                  tabIndex={-1}
+                  aria-disabled="true"
+                  style={{ width: '32px', height: '32px', backgroundColor: 'var(--color-sage-light)', color: 'var(--color-forest)', opacity: 0.55 }}
+                >
+                  <ThreadsIcon size={14} />
+                </span>
+                <a
+                  href="mailto:oviya8466@gmail.com"
+                  className="footer-social-btn"
+                  title="Contact via Email"
+                  aria-label="Email"
+                  style={{ width: '32px', height: '32px', backgroundColor: 'var(--color-sage-light)', color: 'var(--color-forest)' }}
+                >
+                  <Mail size={14} />
+                </a>
+              </div>
             </div>
           ))}
         </div>

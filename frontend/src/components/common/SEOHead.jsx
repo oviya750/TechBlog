@@ -80,7 +80,11 @@ const SEOHead = ({
         logo: `${window.location.origin}/favicon.svg`,
         description:
           'Independent engineering publication investigating scalable software architecture and technology frontiers.',
-        sameAs: ['https://github.com', 'https://twitter.com', 'https://linkedin.com']
+        sameAs: [
+          'https://github.com/oviya750',
+          'https://twitter.com',
+          'https://www.linkedin.com/in/oviya2006/'
+        ]
       }
     ];
 

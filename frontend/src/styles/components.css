@@ -791,6 +791,19 @@
   transform: translateY(-2px);
 }
 
+.footer-social-btn-disabled,
+.footer-social-btn[aria-disabled="true"] {
+  cursor: default !important;
+  opacity: 0.65;
+}
+
+.footer-social-btn-disabled:hover,
+.footer-social-btn[aria-disabled="true"]:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: var(--color-white) !important;
+  transform: none !important;
+}
+
 /* --------------------------------------------------------------------------
    8. BLOG DETAIL LAYOUT & TABLE OF CONTENTS
    -------------------------------------------------------------------------- */

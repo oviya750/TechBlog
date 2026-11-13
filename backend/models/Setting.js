@@ -38,12 +38,17 @@ const settingSchema = new mongoose.Schema(
     },
     githubUrl: {
       type: String,
-      default: 'https://github.com/techblog',
+      default: 'https://github.com/oviya750',
       trim: true
     },
     linkedinUrl: {
       type: String,
-      default: 'https://linkedin.com/company/techblog',
+      default: 'https://www.linkedin.com/in/oviya2006/',
+      trim: true
+    },
+    threadsUrl: {
+      type: String,
+      default: '',
       trim: true
     },
     enableComments: {
